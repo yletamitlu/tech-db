@@ -9,6 +9,7 @@ import (
 	"github.com/yletamitlu/tech-db/internal/user/repository"
 	"github.com/yletamitlu/tech-db/internal/user/usecase"
 	"log"
+	. "github.com/yletamitlu/tech-db/internal/mwares"
 )
 
 func main() {
@@ -31,5 +32,5 @@ func main() {
 
 	userDelivery.Configure(router)
 
-	log.Fatal(fasthttp.ListenAndServe(":5000", router.Handler))
+	log.Fatal(fasthttp.ListenAndServe(":5000", PanicRecovering(SetHeaders(router.Handler))))
 }

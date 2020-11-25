@@ -28,8 +28,6 @@ func (ud *UserDelivery) Configure(router *fasthttprouter.Router) {
 
 func (ud *UserDelivery) createUserHandler() fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
-		ctx.Response.Header.Set("Content-type", "application/json")
-
 		nickname, _ := ctx.UserValue("nickname").(string)
 
 		u := &models.User{
