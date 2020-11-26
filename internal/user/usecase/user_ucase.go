@@ -29,3 +29,21 @@ func (uUc *UserUcase) Create(user *models.User) (error, []*models.User) {
 
 	return nil, nil
 }
+
+func (uUu *UserUcase) GetByNickname(nickname string) (*models.User, error) {
+	u, err := uUu.userRepos.SelectByNickname(nickname)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return u, nil
+}
+
+func (uUu *UserUcase) Update(updatedUser *models.User) error {
+	if err := uUu.userRepos.Update(updatedUser); err != nil {
+		return err
+	}
+
+	return nil
+}

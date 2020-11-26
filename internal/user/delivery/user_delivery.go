@@ -24,6 +24,33 @@ func NewUserDelivery(uUc user.UserUsecase) *UserDelivery {
 
 func (ud *UserDelivery) Configure(router *fasthttprouter.Router) {
 	router.POST("/api/user/:nickname/create", ud.createUserHandler())
+	router.GET("/api/user/:nickname/profile", ud.getUserProfile())
+	router.POST("/api/user/:nickname/profile", ud.updateProfile())
+}
+
+func (ud *UserDelivery) getUserProfile() fasthttp.RequestHandler {
+	return func(ctx *fasthttp.RequestCtx) {
+		nickname, _ := ctx.UserValue("nickname").(string)
+
+		u, err := ud.userUcase.GetByNickname(nickname)
+
+		if err != nil && err == ErrNotFound {
+			logrus.Info(err)
+			SendResponse(ctx, 404, &ErrorResponse{
+				Message: err.Error(),
+			})
+			return
+		}
+
+		if err != nil {
+			logrus.Info(err)
+			SendResponse(ctx, 500, &ErrorResponse{
+				Message: ErrInternal.Error(),
+			})
+		}
+
+		SendResponse(ctx, 200, u)
+	}
 }
 
 func (ud *UserDelivery) createUserHandler() fasthttp.RequestHandler {
@@ -61,5 +88,44 @@ func (ud *UserDelivery) createUserHandler() fasthttp.RequestHandler {
 
 		SendResponse(ctx, 201, u)
 		return
+	}
+}
+
+func (ud *UserDelivery) updateProfile() fasthttp.RequestHandler {
+	return func(ctx *fasthttp.RequestCtx) {
+		nickname, _ := ctx.UserValue("nickname").(string)
+
+		updatedUser := &models.User{
+			Nickname: nickname,
+		}
+
+		body := ctx.Request.Body()
+		if err := json.Unmarshal(body, &updatedUser); err != nil {
+			logrus.Info(err)
+			SendResponse(ctx, 500, &ErrorResponse{
+				Message: ErrInternal.Error(),
+			})
+			return
+		}
+
+		err := ud.userUcase.Update(updatedUser)
+
+		if err != nil && err == ErrNotFound {
+			logrus.Info(err)
+			SendResponse(ctx, 404, &ErrorResponse{
+				Message: err.Error(),
+			})
+			return
+		}
+
+		if err != nil {
+			logrus.Info(err)
+			SendResponse(ctx, 500, &ErrorResponse{
+				Message: ErrInternal.Error(),
+			})
+			return
+		}
+
+		SendResponse(ctx, 200, updatedUser)
 	}
 }

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"github.com/jmoiron/sqlx"
+	"github.com/yletamitlu/tech-db/internal/consts"
 	. "github.com/yletamitlu/tech-db/internal/helpers"
 	"github.com/yletamitlu/tech-db/internal/models"
 	"github.com/yletamitlu/tech-db/internal/user"
@@ -38,6 +39,37 @@ func (ur *UserPgRepos) InsertInto(user *models.User) error {
 		user.Email,
 		user.About); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (ur *UserPgRepos) SelectByNickname(nickname string) (*models.User, error) {
+	u := &models.User{}
+
+	if err := ur.conn.Get(u, `SELECT * from users where nickname = $1`, nickname); err != nil {
+		return nil, PgxErrToCustom(err)
+	}
+
+	return u, nil
+}
+
+func (ur *UserPgRepos) Update(updatedUser *models.User) error {
+	var affected int64
+
+	res, err := ur.conn.Exec(`UPDATE users SET email = $1, fullname = $2, about = $3 where nickname = $4`,
+		updatedUser.Email, updatedUser.FullName, updatedUser.About, updatedUser.Nickname)
+
+	if err != nil {
+		return err
+	}
+
+	if res != nil {
+		affected, _ = res.RowsAffected()
+	}
+
+	if affected <= 0 {
+		return consts.ErrNotFound
 	}
 
 	return nil

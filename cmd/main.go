@@ -1,15 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"github.com/buaazp/fasthttprouter"
 	_ "github.com/jackc/pgx/stdlib"
 	"github.com/jmoiron/sqlx"
 	"github.com/valyala/fasthttp"
+	. "github.com/yletamitlu/tech-db/internal/mwares"
 	"github.com/yletamitlu/tech-db/internal/user/delivery"
 	"github.com/yletamitlu/tech-db/internal/user/repository"
 	"github.com/yletamitlu/tech-db/internal/user/usecase"
 	"log"
-	. "github.com/yletamitlu/tech-db/internal/mwares"
 )
 
 func main() {
@@ -32,5 +33,6 @@ func main() {
 
 	userDelivery.Configure(router)
 
-	log.Fatal(fasthttp.ListenAndServe(":5000", PanicRecovering(SetHeaders(router.Handler))))
+	fmt.Printf("Server started...")
+	log.Fatal(fasthttp.ListenAndServe(":5000", Use(router.Handler, PanicRecovering, SetHeaders, AccessLog)))
 }
