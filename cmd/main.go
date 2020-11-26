@@ -32,5 +32,5 @@ func main() {
 
 	userDelivery.Configure(router)
 
-	log.Fatal(fasthttp.ListenAndServe(":5000", PanicRecovering(SetHeaders(router.Handler))))
+	log.Fatal(fasthttp.ListenAndServe(":5000", PanicRecovering(SetHeaders(AccessLog(router.Handler)))))
 }
