@@ -7,6 +7,16 @@ import (
 	"time"
 )
 
+type Middleware func(fasthttp.RequestHandler) fasthttp.RequestHandler
+
+func Use(mainHandler fasthttp.RequestHandler, mwares ...Middleware) fasthttp.RequestHandler {
+	for i := len(mwares) - 1; i >= 0; i-- {
+		mainHandler = mwares[i](mainHandler)
+	}
+
+	return mainHandler
+}
+
 func PanicRecovering(next fasthttp.RequestHandler) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 		defer func() {
