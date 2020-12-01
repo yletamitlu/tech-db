@@ -47,6 +47,7 @@ func (ud *UserDelivery) getUserProfile() fasthttp.RequestHandler {
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
+			return
 		}
 
 		SendResponse(ctx, 200, u)
@@ -108,11 +109,19 @@ func (ud *UserDelivery) updateProfile() fasthttp.RequestHandler {
 			return
 		}
 
-		err := ud.userUcase.Update(updatedUser)
+		resU, err := ud.userUcase.Update(updatedUser)
 
 		if err != nil && err == ErrNotFound {
 			logrus.Info(err)
 			SendResponse(ctx, 404, &ErrorResponse{
+				Message: err.Error(),
+			})
+			return
+		}
+
+		if err != nil && err == ErrConflict {
+			logrus.Info(err)
+			SendResponse(ctx, 409, &ErrorResponse{
 				Message: err.Error(),
 			})
 			return
@@ -123,6 +132,11 @@ func (ud *UserDelivery) updateProfile() fasthttp.RequestHandler {
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
+			return
+		}
+
+		if resU != nil {
+			SendResponse(ctx, 200, resU)
 			return
 		}
 

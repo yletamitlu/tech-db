@@ -30,8 +30,8 @@ func (uUc *UserUcase) Create(user *models.User) (error, []*models.User) {
 	return nil, nil
 }
 
-func (uUu *UserUcase) GetByNickname(nickname string) (*models.User, error) {
-	u, err := uUu.userRepos.SelectByNickname(nickname)
+func (uUc *UserUcase) GetByNickname(nickname string) (*models.User, error) {
+	u, err := uUc.userRepos.SelectByNickname(nickname)
 
 	if err != nil {
 		return nil, err
@@ -40,10 +40,33 @@ func (uUu *UserUcase) GetByNickname(nickname string) (*models.User, error) {
 	return u, nil
 }
 
-func (uUu *UserUcase) Update(updatedUser *models.User) error {
-	if err := uUu.userRepos.Update(updatedUser); err != nil {
-		return err
+func (uUc *UserUcase) Update(updatedUser *models.User) (*models.User, error) {
+	u, _ := uUc.userRepos.SelectByEmail(updatedUser.Email)
+
+	if u != nil {
+		return nil, ErrConflict
 	}
 
-	return nil
+	//if updatedUser.Email == "" && updatedUser.FullName == "" && updatedUser.About == "" {
+	//	u, err := uUc.userRepos.SelectByNickname(updatedUser.Nickname)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//
+	//	return u, nil
+	//}
+
+	if err := uUc.userRepos.Update(updatedUser); err != nil {
+		return nil, err
+	}
+
+	u, err := uUc.userRepos.SelectByNickname(updatedUser.Nickname)
+	if u == nil {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return u, nil
 }
