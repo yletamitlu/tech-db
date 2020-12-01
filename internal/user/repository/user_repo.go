@@ -2,7 +2,6 @@ package repository
 
 import (
 	"github.com/jmoiron/sqlx"
-	"github.com/yletamitlu/tech-db/internal/consts"
 	. "github.com/yletamitlu/tech-db/internal/helpers"
 	"github.com/yletamitlu/tech-db/internal/models"
 	"github.com/yletamitlu/tech-db/internal/user"
@@ -54,23 +53,30 @@ func (ur *UserPgRepos) SelectByNickname(nickname string) (*models.User, error) {
 	return u, nil
 }
 
-func (ur *UserPgRepos) Update(updatedUser *models.User) error {
-	var affected int64
+func (ur *UserPgRepos) SelectByEmail(email string) (*models.User, error) {
+	u := &models.User{}
 
-	res, err := ur.conn.Exec(`UPDATE users SET email = $1, fullname = $2, about = $3 where nickname = $4`,
-		updatedUser.Email, updatedUser.FullName, updatedUser.About, updatedUser.Nickname)
-
-	if err != nil {
-		return err
+	if err := ur.conn.Get(u, `SELECT * from users where email = $1`, email); err != nil {
+		return nil, PgxErrToCustom(err)
 	}
 
-	if res != nil {
-		affected, _ = res.RowsAffected()
+	return u, nil
+}
+
+func (ur *UserPgRepos) Update(updatedUser *models.User) {
+
+	if updatedUser.Email != "" {
+		_, _ = ur.conn.Exec(`UPDATE users SET email = $1 where nickname = $2`,
+			updatedUser.Email, updatedUser.Nickname)
 	}
 
-	if affected <= 0 {
-		return consts.ErrNotFound
+	if updatedUser.FullName != "" {
+		_, _ = ur.conn.Exec(`UPDATE users SET fullname = $1 where nickname = $2`,
+			updatedUser.FullName, updatedUser.Nickname)
 	}
 
-	return nil
+	if updatedUser.About != "" {
+		_, _ = ur.conn.Exec(`UPDATE users SET about = $1 where nickname = $2`,
+			updatedUser.About, updatedUser.Nickname)
+	}
 }
