@@ -23,27 +23,61 @@ func NewForumDelivery(fUc forum.ForumUsecase) *ForumDelivery {
 }
 
 func (fd *ForumDelivery) Configure(router *fasthttprouter.Router) {
-	router.POST("/api/forum/create", fd.createForumHandler())
+	// /api/forum/create в CrutchRouter'e
+	router.GET("/api/forum/:slug/details", fd.getForumDetailsHandler())
 }
 
-func (fd *ForumDelivery) createForumHandler() fasthttp.RequestHandler {
+func (fd *ForumDelivery) CreateForumHandler(ctx *fasthttp.RequestCtx) {
+	f := &models.Forum{}
+
+	body := ctx.Request.Body()
+	if err := json.Unmarshal(body, &f); err != nil {
+		logrus.Info(err)
+		SendResponse(ctx, 500, &ErrorResponse{
+			Message: ErrInternal.Error(),
+		})
+		return
+	}
+
+	f, err := fd.forumUcase.Create(f)
+
+	if err == ErrAlreadyExists {
+		logrus.Info(err)
+		SendResponse(ctx, 409, f)
+		return
+	}
+
+	if err == ErrNotFound {
+		logrus.Info(err)
+		SendResponse(ctx, 404, &ErrorResponse{
+			Message: ErrNotFound.Error(),
+		})
+		return
+	}
+
+	if err != nil {
+		logrus.Info(err)
+		SendResponse(ctx, 500, &ErrorResponse{
+			Message: ErrInternal.Error(),
+		})
+		return
+	}
+
+	SendResponse(ctx, 201, f)
+	return
+}
+
+func (fd *ForumDelivery) getForumDetailsHandler() fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
-		f := &models.Forum{}
+		slug, _ := ctx.UserValue("slug").(string)
 
-		body := ctx.Request.Body()
-		if err := json.Unmarshal(body, &f); err != nil {
+		found, err := fd.forumUcase.GetBySlug(slug)
+
+		if err == ErrNotFound {
 			logrus.Info(err)
-			SendResponse(ctx, 500, &ErrorResponse{
-				Message: ErrInternal.Error(),
+			SendResponse(ctx, 404, &ErrorResponse{
+				Message: ErrNotFound.Error(),
 			})
-			return
-		}
-
-		err, found := fd.forumUcase.Create(f)
-
-		if found != nil {
-			logrus.Info(err)
-			SendResponse(ctx, 409, found)
 			return
 		}
 
@@ -55,7 +89,7 @@ func (fd *ForumDelivery) createForumHandler() fasthttp.RequestHandler {
 			return
 		}
 
-		SendResponse(ctx, 201, f)
+		SendResponse(ctx, 200, found)
 		return
 	}
 }
