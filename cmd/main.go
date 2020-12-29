@@ -17,6 +17,10 @@ import (
 	threadD "github.com/yletamitlu/tech-db/internal/threads/delivery"
 	threadR "github.com/yletamitlu/tech-db/internal/threads/repository"
 	threadU "github.com/yletamitlu/tech-db/internal/threads/usecase"
+
+	postD "github.com/yletamitlu/tech-db/internal/post/delivery"
+	postR "github.com/yletamitlu/tech-db/internal/post/repository"
+	postU "github.com/yletamitlu/tech-db/internal/post/usecase"
 	"log"
 )
 
@@ -67,12 +71,17 @@ func main() {
 	forumDelivery := forumD.NewForumDelivery(forumUcase)
 
 	threadRepos := threadR.NewThreadRepository(conn)
-	threadUcase := threadU.NewThreadUcase(threadRepos, userUcase)
+	threadUcase := threadU.NewThreadUcase(threadRepos, userUcase, forumUcase)
 	threadDelivery := threadD.NewThreadDelivery(threadUcase)
+
+	postRepos := postR.NewPostRepository(conn)
+	postUcase := postU.NewPostUcase(postRepos, userUcase, threadUcase)
+	postDelivery := postD.NewPostDelivery(postUcase)
 
 	userDelivery.Configure(router)
 	threadDelivery.Configure(router)
 	forumDelivery.Configure(router)
+	postDelivery.Configure(router)
 
 	crutchRouter := NewCrutchRouter(router, forumDelivery)
 

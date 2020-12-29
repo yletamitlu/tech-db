@@ -2,7 +2,6 @@ package delivery
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/buaazp/fasthttprouter"
 	"github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
@@ -12,7 +11,6 @@ import (
 	"github.com/yletamitlu/tech-db/internal/threads"
 	. "github.com/yletamitlu/tech-db/tools"
 	"strconv"
-	"time"
 )
 
 type ThreadDelivery struct {
@@ -70,21 +68,16 @@ func (td *ThreadDelivery) createThreadHandler() fasthttp.RequestHandler {
 
 func (td *ThreadDelivery) getThreadsHandler() fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
-		fmt.Println(ctx.URI())
 		slug, _ := ctx.UserValue("slug").(string)
 		limitStr := string(ctx.QueryArgs().Peek("limit"))
 		descStr := string(ctx.QueryArgs().Peek("desc"))
-		sinceStr := string(ctx.QueryArgs().Peek("since"))
+		since := string(ctx.QueryArgs().Peek("since"))
 
 		limit, _ := strconv.Atoi(limitStr)
 		desc, _ := strconv.ParseBool(descStr)
-		since, err := time.Parse(time.RFC3339Nano, sinceStr)
-		fmt.Print(since)
+		//since, err := time.Parse(time.RFC3339Nano, sinceStr)
 
 		found, err := td.threadUcase.GetByForumSlug(slug, limit, desc, since)
-
-		dat, _ := td.threadUcase.GetByDate(slug, since)
-		fmt.Print(dat)
 
 		if found == nil {
 			logrus.Info(err)

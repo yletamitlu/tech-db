@@ -1,12 +1,10 @@
 package repository
 
 import (
-	"fmt"
 	"github.com/jmoiron/sqlx"
 	. "github.com/yletamitlu/tech-db/internal/helpers"
 	"github.com/yletamitlu/tech-db/internal/models"
 	"github.com/yletamitlu/tech-db/internal/threads"
-	"time"
 )
 
 type ThreadPgRepos struct {
@@ -47,11 +45,10 @@ func (tr *ThreadPgRepos) SelectById(id int) (*models.Thread, error) {
 	return thread, nil
 }
 
-func (tr *ThreadPgRepos) SelectByForumSlug(slug string, limit int, desc bool, since time.Time) ([]*models.Thread, error) {
+func (tr *ThreadPgRepos) SelectByForumSlug(slug string, limit int, desc bool, since string) ([]*models.Thread, error) {
 	var threads []*models.Thread
 
-	str := since.String()
-	if str == "0001-01-01 00:00:00 +0000 UTC" {
+	if since == "" {
 		if desc {
 			if err := tr.conn.Select(&threads,
 				`SELECT * from threads where forum_slug = $1 order by created_at desc limit $2`,
@@ -60,13 +57,12 @@ func (tr *ThreadPgRepos) SelectByForumSlug(slug string, limit int, desc bool, si
 			}
 		} else {
 			if err := tr.conn.Select(&threads,
-				`SELECT * from threads where forum_slug = $1 limit $2`,
+				`SELECT * from threads where forum_slug = $1 order by created_at limit $2`,
 				slug, limit); err != nil {
 				return nil, PgxErrToCustom(err)
 			}
 		}
 	} else {
-		fmt.Println(since.Local())
 		if desc {
 			if err := tr.conn.Select(&threads,
 				`SELECT * from threads where forum_slug = $1 and created_at <= $2 order by created_at desc limit $3`,
@@ -75,7 +71,7 @@ func (tr *ThreadPgRepos) SelectByForumSlug(slug string, limit int, desc bool, si
 			}
 		} else {
 			if err := tr.conn.Select(&threads,
-				`SELECT * from threads where forum_slug = $1 and created_at <= $2 limit $3`,
+				`SELECT * from threads where forum_slug = $1 and created_at >= $2 order by created_at limit $3`,
 				slug, since, limit); err != nil {
 				return nil, PgxErrToCustom(err)
 			}
@@ -83,18 +79,6 @@ func (tr *ThreadPgRepos) SelectByForumSlug(slug string, limit int, desc bool, si
 	}
 
 	return threads, nil
-}
-
-func (tr *ThreadPgRepos) SelectByDate(forumSlug string, since time.Time) (*models.Thread, error) {
-	thread := &models.Thread{}
-
-	if err := tr.conn.Get(thread,
-		`SELECT * from threads where forum_slug = $1 and created_at = $2`,
-		forumSlug, since); err != nil {
-		return nil, PgxErrToCustom(err)
-	}
-
-	return thread, nil
 }
 
 func (tr *ThreadPgRepos) InsertInto(thread *models.Thread) error {

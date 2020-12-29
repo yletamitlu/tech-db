@@ -2,21 +2,23 @@ package usecase
 
 import (
 	. "github.com/yletamitlu/tech-db/internal/consts"
+	"github.com/yletamitlu/tech-db/internal/forum"
 	"github.com/yletamitlu/tech-db/internal/models"
 	"github.com/yletamitlu/tech-db/internal/threads"
 	"github.com/yletamitlu/tech-db/internal/user"
-	"time"
 )
 
 type ThreadUcase struct {
 	threadRepos threads.ThreadRepository
 	userUcase user.UserUsecase
+	forumUcase forum.ForumUsecase
 }
 
-func NewThreadUcase(repos threads.ThreadRepository, userUcase user.UserUsecase) threads.ThreadUsecase {
+func NewThreadUcase(repos threads.ThreadRepository, userUcase user.UserUsecase, forumUcase forum.ForumUsecase) threads.ThreadUsecase {
 	return &ThreadUcase{
 		threadRepos: repos,
 		userUcase: userUcase,
+		forumUcase: forumUcase,
 	}
 }
 
@@ -43,6 +45,7 @@ func (tUc *ThreadUcase) GetBySlug(slug string) (*models.Thread, error) {
 
 	return found, nil
 }
+
 func (tUc *ThreadUcase) GetById(id int) (*models.Thread, error) {
 	found, err := tUc.threadRepos.SelectById(id)
 
@@ -53,8 +56,22 @@ func (tUc *ThreadUcase) GetById(id int) (*models.Thread, error) {
 	return found, nil
 }
 
-func (tUc *ThreadUcase) GetByForumSlug(forumSlug string, limit int, desc bool, since time.Time) ([]*models.Thread, error) {
+func (tUc *ThreadUcase) GetByForumSlug(forumSlug string, limit int, desc bool, since string) ([]*models.Thread, error) {
+	foundForum, err := tUc.forumUcase.GetBySlug(forumSlug)
+
+	if err != nil {
+		return nil, err
+	}
+
 	found, err := tUc.threadRepos.SelectByForumSlug(forumSlug, limit, desc, since)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if found == nil && foundForum != nil {
+		found = []*models.Thread{}
+	}
 
 	if found == nil {
 		return nil, err
@@ -81,14 +98,4 @@ func (tUc *ThreadUcase) Update(updatedThread *models.Thread) (*models.Thread, er
 	//}
 
 	return u, nil
-}
-
-func (tUc *ThreadUcase) GetByDate(forumSlug string, date time.Time) (*models.Thread, error) {
-	found, err := tUc.threadRepos.SelectByDate(forumSlug, date)
-
-	if found == nil {
-		return nil, err
-	}
-
-	return found, nil
 }
