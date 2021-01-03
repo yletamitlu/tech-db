@@ -29,6 +29,22 @@ func (tUc *ThreadUcase) Create(thread *models.Thread) (*models.Thread, error) {
 		return found, ErrAlreadyExists
 	}
 
+	foundAuthor, _ := tUc.userUcase.GetByNickname(thread.AuthorNickname)
+
+	if foundAuthor == nil {
+		return nil, ErrNotFound
+	}
+
+	foundForum, _ := tUc.forumUcase.GetBySlug(thread.ForumSlug)
+
+	if foundForum != nil && thread.ForumSlug != foundForum.Slug {
+		thread.ForumSlug = foundForum.Slug
+	}
+
+	if foundForum == nil {
+		return nil, ErrNotFound
+	}
+
 	if err := tUc.threadRepos.InsertInto(thread); err != nil {
 		return nil, err
 	}

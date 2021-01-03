@@ -45,11 +45,19 @@ func (td *ThreadDelivery) createThreadHandler() fasthttp.RequestHandler {
 			return
 		}
 
-		err, found := td.threadUcase.Create(thr)
+		found, err := td.threadUcase.Create(thr)
 
 		if found != nil {
 			logrus.Info(err)
 			SendResponse(ctx, 409, found)
+			return
+		}
+
+		if err == ErrNotFound {
+			logrus.Info(err)
+			SendResponse(ctx, 404, &ErrorResponse{
+				Message: ErrNotFound.Error(),
+			})
 			return
 		}
 
@@ -75,7 +83,6 @@ func (td *ThreadDelivery) getThreadsHandler() fasthttp.RequestHandler {
 
 		limit, _ := strconv.Atoi(limitStr)
 		desc, _ := strconv.ParseBool(descStr)
-		//since, err := time.Parse(time.RFC3339Nano, sinceStr)
 
 		found, err := td.threadUcase.GetByForumSlug(slug, limit, desc, since)
 
