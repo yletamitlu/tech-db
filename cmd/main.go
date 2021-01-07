@@ -21,6 +21,9 @@ import (
 	postD "github.com/yletamitlu/tech-db/internal/post/delivery"
 	postR "github.com/yletamitlu/tech-db/internal/post/repository"
 	postU "github.com/yletamitlu/tech-db/internal/post/usecase"
+
+	voteR "github.com/yletamitlu/tech-db/internal/vote/repository"
+	voteU "github.com/yletamitlu/tech-db/internal/vote/usecase"
 	"log"
 )
 
@@ -70,8 +73,11 @@ func main() {
 	forumUcase := forumU.NewForumUcase(forumRepos, userUcase)
 	forumDelivery := forumD.NewForumDelivery(forumUcase)
 
+	voteRepos := voteR.NewVoteRepository(conn)
+	voteUcase := voteU.NewVoteUcase(voteRepos)
+
 	threadRepos := threadR.NewThreadRepository(conn)
-	threadUcase := threadU.NewThreadUcase(threadRepos, userUcase, forumUcase)
+	threadUcase := threadU.NewThreadUcase(threadRepos, userUcase, forumUcase, voteUcase)
 	threadDelivery := threadD.NewThreadDelivery(threadUcase)
 
 	postRepos := postR.NewPostRepository(conn)

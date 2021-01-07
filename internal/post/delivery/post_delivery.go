@@ -11,6 +11,7 @@ import (
 	"github.com/yletamitlu/tech-db/internal/models"
 	"github.com/yletamitlu/tech-db/internal/post"
 	. "github.com/yletamitlu/tech-db/tools"
+	"strconv"
 )
 
 type PostDelivery struct {
@@ -24,25 +25,20 @@ func NewPostDelivery(pUc post.PostUsecase) *PostDelivery {
 }
 
 func (pd *PostDelivery) Configure(router *fasthttprouter.Router) {
-	router.POST("/api/thread/:slug/create", pd.createThreadHandler())
-	router.GET("/api/post/:slug/details", pd.getThreadsHandler())
+	router.POST("/api/thread/:slug/create", pd.createPostHandler())
+	router.GET("/api/post/:slug/details", pd.getPostHandler())
+	router.GET("/api/thread/:slug/posts", pd.getPostsHandler())
 }
 
-func (pd *PostDelivery) createThreadHandler() fasthttp.RequestHandler {
+func (pd *PostDelivery) createPostHandler() fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 		slugStr, _ := ctx.UserValue("slug").(string)
 
-		var posts []models.Post
+		var posts []*models.Post
 
-		body := ctx.Request.Body()
-		if string(body) == "[]\n" {
-			var posts []*models.Post
-			posts = []*models.Post{}
-			SendResponse(ctx, 201, posts)
-			return
-		}
+		err := json.Unmarshal(ctx.Request.Body(), &posts)
 
-		if err := json.Unmarshal(body, &posts); err != nil {
+		if err != nil {
 			logrus.Info(err)
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
@@ -50,19 +46,29 @@ func (pd *PostDelivery) createThreadHandler() fasthttp.RequestHandler {
 			return
 		}
 
-		var resultPosts []*models.Post
-		for _, pst := range posts {
-			resultPost, err := pd.postUcase.Create(&pst, slugStr)
+		resultPosts, err := pd.postUcase.Create(posts, slugStr)
 
-			if err != nil {
-				logrus.Info(err)
-				SendResponse(ctx, 500, &ErrorResponse{
-					Message: ErrInternal.Error(),
-				})
-				return
-			}
+		if resultPosts == nil {
+			var posts []*models.Post
+			posts = []*models.Post{}
+			SendResponse(ctx, 201, posts)
+			return
+		}
 
-			resultPosts = append(resultPosts, resultPost)
+		if err == ErrAlreadyExists {
+			logrus.Info(err)
+			SendResponse(ctx, 409, &ErrorResponse{
+				Message: ErrAlreadyExists.Error(),
+			})
+			return
+		}
+
+		if err != nil {
+			logrus.Info(err)
+			SendResponse(ctx, 500, &ErrorResponse{
+				Message: ErrInternal.Error(),
+			})
+			return
 		}
 
 		SendResponse(ctx, 201, resultPosts)
@@ -70,7 +76,7 @@ func (pd *PostDelivery) createThreadHandler() fasthttp.RequestHandler {
 	}
 }
 
-func (pd *PostDelivery) getThreadsHandler() fasthttp.RequestHandler {
+func (pd *PostDelivery) getPostHandler() fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 		fmt.Println(ctx.URI())
 		slug, _ := ctx.UserValue("slug").(string)
@@ -94,6 +100,40 @@ func (pd *PostDelivery) getThreadsHandler() fasthttp.RequestHandler {
 		}
 
 		SendResponse(ctx, 200, found)
+		return
+	}
+}
+
+func (pd *PostDelivery) getPostsHandler() fasthttp.RequestHandler {
+	return func(ctx *fasthttp.RequestCtx) {
+		slugOrId, _ := ctx.UserValue("slug").(string)
+		limitStr := string(ctx.QueryArgs().Peek("limit"))
+		descStr := string(ctx.QueryArgs().Peek("desc"))
+		since := string(ctx.QueryArgs().Peek("since"))
+		sort := string(ctx.QueryArgs().Peek("sort"))
+
+		limit, _ := strconv.Atoi(limitStr)
+		desc, _ := strconv.ParseBool(descStr)
+
+		posts, err := pd.postUcase.GetPosts(slugOrId, limit, desc, since, sort)
+
+		if posts == nil {
+			logrus.Info(err)
+			SendResponse(ctx, 404, &ErrorResponse{
+				Message: ErrNotFound.Error(),
+			})
+			return
+		}
+
+		if err != nil {
+			logrus.Info(err)
+			SendResponse(ctx, 500, &ErrorResponse{
+				Message: ErrInternal.Error(),
+			})
+			return
+		}
+
+		SendResponse(ctx, 200, posts)
 		return
 	}
 }

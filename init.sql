@@ -1,18 +1,18 @@
 DROP TABLE IF EXISTS users CASCADE;
 CREATE TABLE IF NOT EXISTS users
 (
-    nickname citext      NOT NULL PRIMARY KEY,
-    fullname varchar(64) NOT NULL CHECK (fullname <> ''),
-    email    citext      NOT NULL UNIQUE CHECK (email <> ''),
+    nickname citext NOT NULL PRIMARY KEY,
+    fullname text   NOT NULL,
+    email    citext NOT NULL UNIQUE,
     about    text
 );
 
 DROP TABLE IF EXISTS forums CASCADE;
 CREATE TABLE IF NOT EXISTS forums
 (
-    author_nickname citext      NOT NULL REFERENCES users (nickname) ON DELETE CASCADE,
-    title           varchar(64) NOT NULL CHECK (title <> ''),
-    slug            citext      NOT NULL CHECK (slug <> '') PRIMARY KEY,
+    author_nickname citext NOT NULL REFERENCES users (nickname) ON DELETE CASCADE,
+    title           text   NOT NULL,
+    slug            citext NOT NULL PRIMARY KEY,
     threads         integer DEFAULT 0,
     posts           integer DEFAULT 0
 );
@@ -20,13 +20,13 @@ CREATE TABLE IF NOT EXISTS forums
 DROP TABLE IF EXISTS threads CASCADE;
 CREATE TABLE IF NOT EXISTS threads
 (
-    id              serial      NOT NULL PRIMARY KEY,
-    slug            citext not null default '',
+    id              serial  NOT NULL PRIMARY KEY,
+    slug            citext  not null default '',
     author_nickname citext REFERENCES users (nickname) ON DELETE CASCADE,
-    created_at      timestamptz DEFAULT now(),
+    created_at      timestamptz      DEFAULT now(),
     forum_slug      citext REFERENCES forums (slug) ON DELETE CASCADE,
     message         text,
-    title           text NOT NULL,
+    title           text    NOT NULL,
     votes           integer not null default 0
 );
 

@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"fmt"
 	. "github.com/yletamitlu/tech-db/internal/consts"
 	"github.com/yletamitlu/tech-db/internal/models"
 	"github.com/yletamitlu/tech-db/internal/post"
@@ -23,36 +24,38 @@ func NewPostUcase(repos post.PostRepository, userUcase user.UserUsecase, threadU
 	}
 }
 
-func (pUc *PostUcase) Create(post *models.Post, thread string) (*models.Post, error) {
-	id, err := strconv.Atoi(thread)
-	if err == nil {
-		foundThr, _ := pUc.threadUcase.GetById(id)
-		if foundThr == nil {
-			return nil, ErrNotFound
-		}
-		post.ForumSlug = foundThr.ForumSlug
-		post.Thread = id
-	} else {
-		foundThr, _ := pUc.threadUcase.GetBySlug(thread)
-		if foundThr == nil {
-			return nil, ErrNotFound
-		}
-		post.ForumSlug = foundThr.ForumSlug
-		post.Thread = foundThr.Id
+func (pUc *PostUcase) Create(posts []*models.Post, slugOrId string) ([]*models.Post, error) {
+	if len(posts) == 0 {
+		return nil, nil
 	}
 
-	found, _ := pUc.postRepos.SelectById(post.Id)
+	var resultPosts []*models.Post
 
-	if found != nil {
-		return found, ErrAlreadyExists
+	for _, pst := range posts {
+		id, err := strconv.Atoi(slugOrId)
+		if err == nil {
+			foundThr, _ := pUc.threadUcase.GetById(id)
+			if foundThr == nil {
+				return nil, ErrNotFound
+			}
+			pst.ForumSlug = foundThr.ForumSlug
+			pst.Thread = id
+		} else {
+			foundThr, _ := pUc.threadUcase.GetBySlug(slugOrId)
+			if foundThr == nil {
+				return nil, ErrNotFound
+			}
+			pst.ForumSlug = foundThr.ForumSlug
+			pst.Thread = foundThr.Id
+		}
 	}
 
-	resultPost, err := pUc.postRepos.InsertInto(post)
+	resultPosts, err := pUc.postRepos.InsertManyInto(posts)
 	if  err != nil {
 		return nil, err
 	}
 
-	return resultPost, nil
+	return resultPosts, nil
 }
 
 func (pUc *PostUcase) GetById(id int) (*models.Post, error) {
@@ -91,4 +94,35 @@ func (pUc *PostUcase) Update(updatedPost *models.Post) (*models.Post, error) {
 	u, _ := pUc.postRepos.SelectById(updatedPost.Id)
 
 	return u, nil
+}
+
+func (pUc *PostUcase) GetPosts(slugOrId string, limit int, desc bool, since string, sort string) ([]*models.Post, error) {
+	id, err := strconv.Atoi(slugOrId)
+	if err != nil {
+		foundThr, _ := pUc.threadUcase.GetBySlug(slugOrId)
+		if foundThr == nil {
+			return nil, ErrNotFound
+		}
+
+		id = foundThr.Id
+	}
+
+	var posts []*models.Post
+
+	fmt.Println(id)
+
+	switch sort {
+	case "tree":
+		//posts, err = pUc.postRepos.SelectPostsTree(id, limit, desc, since)
+	case "parent_tree":
+		//posts, err = pUc.postRepos.SelectPostsParentTree(id, limit, desc, since)
+	default:
+		//posts, err = pUc.postRepos.SelectPostsFlat(id, limit, desc, since)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return posts, nil
 }

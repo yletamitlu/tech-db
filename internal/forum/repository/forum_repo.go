@@ -42,3 +42,11 @@ func (ur *ForumPgRepos) InsertInto(forum *models.Forum) error {
 
 	return nil
 }
+
+func (ur *ForumPgRepos) SelectUsers(slug string, limit int, desc bool, since string) ([]*models.User, error) {
+	var users []*models.User
+
+	//
+
+	return users, nil
+}

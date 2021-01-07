@@ -6,19 +6,28 @@ import (
 	"github.com/yletamitlu/tech-db/internal/models"
 	"github.com/yletamitlu/tech-db/internal/threads"
 	"github.com/yletamitlu/tech-db/internal/user"
+	"github.com/yletamitlu/tech-db/internal/vote"
+	"strconv"
 )
 
 type ThreadUcase struct {
 	threadRepos threads.ThreadRepository
 	userUcase user.UserUsecase
 	forumUcase forum.ForumUsecase
+	voteUcase vote.VoteUsecase
 }
 
-func NewThreadUcase(repos threads.ThreadRepository, userUcase user.UserUsecase, forumUcase forum.ForumUsecase) threads.ThreadUsecase {
+func NewThreadUcase(
+	repos threads.ThreadRepository,
+	userUcase user.UserUsecase,
+	forumUcase forum.ForumUsecase,
+	voteUcase vote.VoteUsecase,
+	) threads.ThreadUsecase {
 	return &ThreadUcase{
 		threadRepos: repos,
 		userUcase: userUcase,
 		forumUcase: forumUcase,
+		voteUcase: voteUcase,
 	}
 }
 
@@ -50,6 +59,43 @@ func (tUc *ThreadUcase) Create(thread *models.Thread) (*models.Thread, error) {
 	}
 
 	return nil, nil
+}
+
+func (tUc *ThreadUcase) CreateVote(vote *models.Vote, slugOrId string) (*models.Thread, error) {
+	id, err := strconv.Atoi(slugOrId)
+
+	var foundThr *models.Thread
+	if err == nil {
+		foundThr, _ = tUc.GetById(id)
+		if foundThr == nil {
+			return nil, ErrNotFound
+		}
+		vote.Thread = id
+	} else {
+		foundThr, _ = tUc.GetBySlug(slugOrId)
+		if foundThr == nil {
+			return nil, ErrNotFound
+		}
+		vote.Thread = foundThr.Id
+	}
+
+	foundAuthor, _ := tUc.userUcase.GetByNickname(vote.AuthorNickname)
+
+	if foundAuthor == nil {
+		return nil, ErrNotFound
+	}
+
+	result, err := tUc.voteUcase.Create(vote)
+
+	if err != nil {
+		return nil, err
+	}
+
+	foundThr.Votes += result
+
+	tUc.threadRepos.UpdateVotes(foundThr)
+
+	return foundThr, nil
 }
 
 func (tUc *ThreadUcase) GetBySlug(slug string) (*models.Thread, error) {

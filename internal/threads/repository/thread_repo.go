@@ -107,3 +107,8 @@ func (tr *ThreadPgRepos) Update(updatedThread *models.Thread) {
 		updatedThread.Message,
 		updatedThread.Id)
 }
+
+func (tr *ThreadPgRepos) UpdateVotes(updatedThread *models.Thread) {
+	_, _ = tr.conn.Exec(`UPDATE threads SET votes = $1 where id = $2`,
+		updatedThread.Votes, updatedThread.Id)
+}

@@ -50,3 +50,18 @@ func (uUc *ForumUcase) GetBySlug(slug string) (*models.Forum, error) {
 
 	return found, nil
 }
+
+func (uUc *ForumUcase) GetUsers(forumSlug string, limit int, desc bool, since string) ([]*models.User, error) {
+	foundForum, _ := uUc.forumRepos.SelectBySlug(forumSlug)
+	if foundForum == nil {
+		return nil, ErrNotFound
+	}
+
+	found, _ := uUc.forumRepos.SelectUsers(forumSlug, limit, desc, since)
+
+	if found == nil {
+		found = []*models.User{}
+	}
+
+	return found, nil
+}
