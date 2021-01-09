@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"github.com/jmoiron/sqlx"
 	. "github.com/yletamitlu/tech-db/internal/helpers"
 	"github.com/yletamitlu/tech-db/internal/models"
@@ -9,11 +10,13 @@ import (
 
 type PostPgRepos struct {
 	conn *sqlx.DB
+	postIdsGenerator *Generator
 }
 
 func NewPostRepository(conn *sqlx.DB) post.PostRepository {
 	return &PostPgRepos{
 		conn: conn,
+		postIdsGenerator: NewGenerator(),
 	}
 }
 
@@ -57,22 +60,51 @@ func (pr *PostPgRepos) InsertInto(post *models.Post) (*models.Post, error) {
 }
 
 func (pr *PostPgRepos) InsertManyInto(posts []*models.Post) ([]*models.Post, error) {
-	stmt, err := pr.conn.Prepare(`
-		INSERT INTO posts (author_nickname, forum_slug, message, created_at, thread_id) 
-				VALUES ($1, $2, $3, $4, $5) RETURNING id`)
-	if err != nil {
-		return nil, err
-	}
+	var queryString string
+	var args []interface{}
 
-	for _, pst := range posts {
-		err := stmt.QueryRow(pst.AuthorNickname, pst.ForumSlug,
-			pst.Message, pst.Created, pst.Thread).Scan(&pst.Id)
-		if err != nil {
-			return nil, err
+	queryString = "INSERT INTO posts (author_nickname, forum_slug, message, created_at, thread_id, id) VALUES "
+
+	chunks := pr.makeChunks(posts)
+
+	numb := 1
+
+	for _, chunk := range chunks {
+		ids := pr.postIdsGenerator.Next(len(chunk))
+		for i, pst := range chunk {
+			queryString = ""
+
+			pst.Id = ids[i]
+
+			queryString += fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d)",
+				numb, numb + 1, numb + 2, numb + 3, numb + 4, numb + 5)
+
+			args = append(args, pst.AuthorNickname, pst.ForumSlug, pst.Message, pst.Created, pst.Thread, pst.Id)
+
+			numb = numb + 5
 		}
+
+		pr.conn.QueryRow(queryString, args...)
 	}
 
 	return posts, nil
+}
+
+func (pr *PostPgRepos) makeChunks(posts []*models.Post) [][]*models.Post {
+	postsChunk := 100
+	var chunks [][]*models.Post
+
+	for i := 0; i < len(posts); i += postsChunk {
+		bound := i + postsChunk
+
+		if bound > len(posts) {
+			bound = len(posts)
+		}
+
+		chunks = append(chunks, posts[i:bound])
+	}
+
+	return chunks
 }
 
 func (pr *PostPgRepos) Update(updatedPost *models.Post) {
