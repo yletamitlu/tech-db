@@ -18,11 +18,12 @@ func NewForumRepository(conn *sqlx.DB) forum.ForumRepository {
 }
 
 func (ur *ForumPgRepos) SelectBySlug(slug string) (*models.Forum, error) {
-	var f *models.Forum
+	f := &models.Forum{}
 
-	if err := ur.conn.Select(&f,
+	if err := ur.conn.Get(f,
 		`SELECT * from forums where slug = $1`,
-		slug); err != nil {
+		slug);
+	err != nil {
 		return nil, PgxErrToCustom(err)
 	}
 
@@ -34,9 +35,18 @@ func (ur *ForumPgRepos) InsertInto(forum *models.Forum) error {
 		`INSERT INTO forums(author_nickname, slug, title) VALUES ($1, $2, $3)`,
 		forum.AuthorNickname,
 		forum.Slug,
-		forum.Title); err != nil {
+		forum.Title);
+	err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (ur *ForumPgRepos) SelectUsers(slug string, limit int, desc bool, since string) ([]*models.User, error) {
+	var users []*models.User
+
+	//
+
+	return users, nil
 }

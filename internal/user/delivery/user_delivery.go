@@ -137,7 +137,7 @@ func (ud *UserDelivery) updateProfile() fasthttp.RequestHandler {
 
 		if resU != nil {
 			SendResponse(ctx, 200, resU)
-			return
+			return 
 		}
 
 		SendResponse(ctx, 200, updatedUser)

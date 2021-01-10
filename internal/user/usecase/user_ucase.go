@@ -47,18 +47,7 @@ func (uUc *UserUcase) Update(updatedUser *models.User) (*models.User, error) {
 		return nil, ErrConflict
 	}
 
-	//if updatedUser.Email == "" && updatedUser.FullName == "" && updatedUser.About == "" {
-	//	u, err := uUc.userRepos.SelectByNickname(updatedUser.Nickname)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	return u, nil
-	//}
-
-	if err := uUc.userRepos.Update(updatedUser); err != nil {
-		return nil, err
-	}
+	uUc.userRepos.Update(updatedUser);
 
 	u, err := uUc.userRepos.SelectByNickname(updatedUser.Nickname)
 	if u == nil {

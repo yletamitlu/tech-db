@@ -13,8 +13,43 @@ import (
 	userD "github.com/yletamitlu/tech-db/internal/user/delivery"
 	userR "github.com/yletamitlu/tech-db/internal/user/repository"
 	userU "github.com/yletamitlu/tech-db/internal/user/usecase"
+
+	threadD "github.com/yletamitlu/tech-db/internal/threads/delivery"
+	threadR "github.com/yletamitlu/tech-db/internal/threads/repository"
+	threadU "github.com/yletamitlu/tech-db/internal/threads/usecase"
+
+	postD "github.com/yletamitlu/tech-db/internal/post/delivery"
+	postR "github.com/yletamitlu/tech-db/internal/post/repository"
+	postU "github.com/yletamitlu/tech-db/internal/post/usecase"
+
+	voteR "github.com/yletamitlu/tech-db/internal/vote/repository"
+	voteU "github.com/yletamitlu/tech-db/internal/vote/usecase"
 	"log"
 )
+
+type CrutchRouter struct {
+	r *fasthttprouter.Router
+	fd *forumD.ForumDelivery
+}
+
+func NewCrutchRouter(r *fasthttprouter.Router, fd *forumD.ForumDelivery) *CrutchRouter {
+	return &CrutchRouter{
+		r: r,
+		fd: fd,
+	}
+}
+
+func (cr *CrutchRouter) GetHandler() fasthttp.RequestHandler {
+	return func(ctx *fasthttp.RequestCtx) {
+		path := string(ctx.Path())
+
+		if path == "/api/forum/create" {
+			cr.fd.CreateForumHandler(ctx)
+		} else {
+			cr.r.Handler(ctx)
+		}
+	}
+}
 
 func main() {
 	conn, err := sqlx.Connect("pgx", "postgres://techdbuser@localhost:5432/techdb")
@@ -35,12 +70,27 @@ func main() {
 	userDelivery := userD.NewUserDelivery(userUcase)
 
 	forumRepos := forumR.NewForumRepository(conn)
-	forumUcase := forumU.NewUserUcase(forumRepos)
+	forumUcase := forumU.NewForumUcase(forumRepos, userUcase)
 	forumDelivery := forumD.NewForumDelivery(forumUcase)
 
+	voteRepos := voteR.NewVoteRepository(conn)
+	voteUcase := voteU.NewVoteUcase(voteRepos)
+
+	threadRepos := threadR.NewThreadRepository(conn)
+	threadUcase := threadU.NewThreadUcase(threadRepos, userUcase, forumUcase, voteUcase)
+	threadDelivery := threadD.NewThreadDelivery(threadUcase)
+
+	postRepos := postR.NewPostRepository(conn)
+	postUcase := postU.NewPostUcase(postRepos, userUcase, threadUcase)
+	postDelivery := postD.NewPostDelivery(postUcase)
+
 	userDelivery.Configure(router)
+	threadDelivery.Configure(router)
 	forumDelivery.Configure(router)
+	postDelivery.Configure(router)
+
+	crutchRouter := NewCrutchRouter(router, forumDelivery)
 
 	fmt.Printf("Server started...")
-	log.Fatal(fasthttp.ListenAndServe(":5000", Use(router.Handler, PanicRecovering, SetHeaders, AccessLog)))
+	log.Fatal(fasthttp.ListenAndServe(":5000", Use(crutchRouter.GetHandler(), PanicRecovering, SetHeaders, AccessLog)))
 }
