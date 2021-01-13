@@ -98,14 +98,29 @@ func (tr *ThreadPgRepos) InsertInto(thread *models.Thread) error {
 	return nil
 }
 
-func (tr *ThreadPgRepos) Update(updatedThread *models.Thread) {
-	_, _ = tr.conn.Exec(`UPDATE threads SET slug = $1, author_nickname = $2, title = $3,
-                   message = $4 where id = $5`,
-		updatedThread.Slug,
-		updatedThread.AuthorNickname,
-		updatedThread.Title,
-		updatedThread.Message,
-		updatedThread.Id)
+func (tr *ThreadPgRepos) Update(updatedThread *models.Thread) error {
+	var err error
+
+	if updatedThread.Title == "" {
+		_, err = tr.conn.Exec(`UPDATE threads SET message = $1 where id = $2`,
+			updatedThread.Message, updatedThread.Id)
+	}
+
+	if updatedThread.Message == "" {
+		_, err = tr.conn.Exec(`UPDATE threads SET title = $1 where id = $2`,
+			updatedThread.Title, updatedThread.Id)
+	}
+
+	if updatedThread.Title != "" && updatedThread.Message != "" {
+		_, err = tr.conn.Exec(`UPDATE threads SET title = $1, message = $2 where id = $3`,
+			updatedThread.Title, updatedThread.Message, updatedThread.Id)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (tr *ThreadPgRepos) UpdateVotes(updatedThread *models.Thread) {

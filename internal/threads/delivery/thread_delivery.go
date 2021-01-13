@@ -115,14 +115,7 @@ func (td *ThreadDelivery) getThreadDetailsHandler() fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 		slugOrId, _ := ctx.UserValue("slug").(string)
 
-		id, err := strconv.Atoi(slugOrId)
-
-		var foundThr *models.Thread
-		if err == nil {
-			foundThr, err = td.threadUcase.GetById(id)
-		} else {
-			foundThr, err = td.threadUcase.GetBySlug(slugOrId)
-		}
+		foundThr, err := td.threadUcase.GetThread(slugOrId)
 
 		if foundThr == nil {
 			logrus.Info(err)
@@ -147,11 +140,9 @@ func (td *ThreadDelivery) getThreadDetailsHandler() fasthttp.RequestHandler {
 
 func (td *ThreadDelivery) updateThreadsHandler() fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
-		slug, _ := ctx.UserValue("slug").(string)
+		slugOrId, _ := ctx.UserValue("slug").(string)
 
-		thr := &models.Thread{
-			ForumSlug: slug,
-		}
+		thr := &models.Thread{}
 
 		body := ctx.Request.Body()
 		if err := json.Unmarshal(body, &thr); err != nil {
@@ -162,7 +153,14 @@ func (td *ThreadDelivery) updateThreadsHandler() fasthttp.RequestHandler {
 			return
 		}
 
-		changed, err := td.threadUcase.Update(thr)
+		changed, err := td.threadUcase.Update(thr, slugOrId)
+
+		if err == ErrNotFound {
+			SendResponse(ctx, 404, &ErrorResponse{
+				Message: ErrNotFound.Error(),
+			})
+			return
+		}
 
 		if err != nil {
 			logrus.Info(err)
@@ -172,7 +170,7 @@ func (td *ThreadDelivery) updateThreadsHandler() fasthttp.RequestHandler {
 			return
 		}
 
-		SendResponse(ctx, 201, changed)
+		SendResponse(ctx, 200, changed)
 		return
 	}
 }

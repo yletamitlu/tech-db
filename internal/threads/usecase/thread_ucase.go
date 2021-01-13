@@ -98,6 +98,27 @@ func (tUc *ThreadUcase) CreateVote(vote *models.Vote, slugOrId string) (*models.
 	return foundThr, nil
 }
 
+func (tUc *ThreadUcase) GetThread(slugOrId string) (*models.Thread, error) {
+	id, err := strconv.Atoi(slugOrId)
+
+	var foundThr *models.Thread
+	if err == nil {
+		foundThr, err = tUc.GetById(id)
+	} else {
+		foundThr, err = tUc.GetBySlug(slugOrId)
+	}
+
+	if foundThr == nil {
+		return nil, ErrNotFound
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return foundThr, nil
+}
+
 func (tUc *ThreadUcase) GetBySlug(slug string) (*models.Thread, error) {
 	found, err := tUc.threadRepos.SelectBySlug(slug)
 
@@ -142,22 +163,39 @@ func (tUc *ThreadUcase) GetByForumSlug(forumSlug string, limit int, desc bool, s
 	return found, nil
 }
 
-func (tUc *ThreadUcase) Update(updatedThread *models.Thread) (*models.Thread, error) {
-	u, _ := tUc.threadRepos.SelectById(updatedThread.Id)
+func (tUc *ThreadUcase) Update(updatedThread *models.Thread, slugOrId string) (*models.Thread, error) {
+	id, err := strconv.Atoi(slugOrId)
 
-	if u != nil {
-		return nil, ErrConflict
+	var foundThr *models.Thread
+	if err == nil {
+		foundThr, _ = tUc.GetById(id)
+	} else {
+		foundThr, _ = tUc.GetBySlug(slugOrId)
 	}
 
-	tUc.threadRepos.Update(updatedThread)
+	if foundThr == nil {
+		return nil, ErrNotFound
+	}
 
-	//u, err := tUc.threadRepos.SelectByNickname(updatedThread.Nickname)
-	//if u == nil {
-	//	return nil, ErrNotFound
-	//}
-	//if err != nil {
-	//	return nil, err
-	//}
+	if updatedThread.Message == "" && updatedThread.Title == "" {
+		return foundThr, nil
+	}
 
-	return u, nil
+	updatedThread.Id = foundThr.Id
+
+	err = tUc.threadRepos.Update(updatedThread)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if updatedThread.Title != "" {
+		foundThr.Title = updatedThread.Title
+	}
+
+	if updatedThread.Message != "" {
+		foundThr.Message = updatedThread.Message
+	}
+
+	return foundThr, nil
 }
