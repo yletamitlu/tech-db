@@ -46,7 +46,17 @@ func (fr *ForumPgRepos) InsertInto(forum *models.Forum) error {
 func (fr *ForumPgRepos) SelectUsers(slug string, limit int, desc bool, since string) ([]*models.User, error) {
 	var users []*models.User
 
-	//
+	queryString := "SELECT U.nickname, U.fullname, U.about, U.email " +
+		"FROM users U JOIN user_forum UF on " +
+		"U.nickname = UF.user_nickname WHERE UF.forum_slug = $1"
+	var values []interface{}
+	values = append(values, slug)
+
+	query, val := MakeQueryForUsers(values, queryString, limit, desc, since)
+
+	if err := fr.conn.Select(&users, query, val...); err != nil {
+		return nil, PgxErrToCustom(err)
+	}
 
 	return users, nil
 }

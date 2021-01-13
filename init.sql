@@ -53,6 +53,25 @@ CREATE TABLE IF NOT EXISTS posts
     path            text    NOT NULL DEFAULT ''
 );
 
+DROP TABLE IF EXISTS user_forum CASCADE;
+CREATE TABLE user_forum
+(
+    user_nickname CITEXT NOT NULL,
+    forum_slug    CITEXT NOT NULL,
+    PRIMARY KEY (forum_slug, user_nickname)
+);
+
+drop function if exists addUserForum;
+create function addUserForum() returns trigger as
+$$
+begin
+    insert into user_forum (forum_slug, user_nickname)
+    values (new.forum_slug, new.author_nickname)
+    on conflict do nothing;
+    return new;
+end;
+$$ language plpgsql;
+
 drop function if exists threadsCounter;
 create or replace function threadsCounter()
     returns trigger as
@@ -73,3 +92,16 @@ create trigger threadsIncrementer
     for each row
 execute procedure threadsCounter();
 
+drop trigger if exists threadsActivity on threads;
+create trigger threadsActivity
+    after insert
+    on threads
+    for each row
+execute procedure addUserForum();
+
+drop trigger if exists postsActivity on posts;
+create trigger postsActivity
+    after insert
+    on posts
+    for each row
+execute procedure addUserForum();
