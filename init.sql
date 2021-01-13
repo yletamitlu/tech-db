@@ -21,13 +21,13 @@ DROP TABLE IF EXISTS threads CASCADE;
 CREATE TABLE IF NOT EXISTS threads
 (
     id              serial  NOT NULL PRIMARY KEY,
-    slug            citext  not null default '',
+    slug            citext  NOT NULL DEFAULT '',
     author_nickname citext REFERENCES users (nickname) ON DELETE CASCADE,
     created_at      timestamptz      DEFAULT now(),
     forum_slug      citext REFERENCES forums (slug) ON DELETE CASCADE,
     message         text,
     title           text    NOT NULL,
-    votes           integer not null default 0
+    votes           integer NOT NULL DEFAULT 0
 );
 
 DROP TABLE IF EXISTS votes CASCADE;
@@ -49,5 +49,27 @@ CREATE TABLE IF NOT EXISTS posts
     forum_slug      citext REFERENCES forums (slug) ON DELETE CASCADE,
     thread_id       integer NOT NULL DEFAULT 0 REFERENCES threads (id) ON DELETE CASCADE,
     parent          integer NOT NULL DEFAULT 0,
-    is_edited       boolean NOT NULL DEFAULT false
-)
+    is_edited       boolean NOT NULL DEFAULT false,
+    path            text    NOT NULL DEFAULT ''
+);
+
+drop function if exists threadsCounter;
+create or replace function threadsCounter()
+    returns trigger as
+$$
+begin
+    update forums
+    set threads = threads + 1
+    where slug = new.forum_slug;
+
+    return null;
+end;
+$$ language plpgsql;
+
+drop trigger if exists threadsIncrementer on threads;
+create trigger threadsIncrementer
+    after insert
+    on threads
+    for each row
+execute procedure threadsCounter();
+

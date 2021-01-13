@@ -81,7 +81,7 @@ func main() {
 	threadDelivery := threadD.NewThreadDelivery(threadUcase)
 
 	postRepos := postR.NewPostRepository(conn)
-	postUcase := postU.NewPostUcase(postRepos, userUcase, threadUcase)
+	postUcase := postU.NewPostUcase(postRepos, userUcase, threadUcase, forumUcase)
 	postDelivery := postD.NewPostDelivery(postUcase)
 
 	userDelivery.Configure(router)

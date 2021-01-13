@@ -2,6 +2,7 @@ package usecase
 
 import (
 	. "github.com/yletamitlu/tech-db/internal/consts"
+	"github.com/yletamitlu/tech-db/internal/forum"
 	"github.com/yletamitlu/tech-db/internal/models"
 	"github.com/yletamitlu/tech-db/internal/post"
 	"github.com/yletamitlu/tech-db/internal/threads"
@@ -14,14 +15,47 @@ type PostUcase struct {
 	postRepos post.PostRepository
 	userUcase user.UserUsecase
 	threadUcase threads.ThreadUsecase
+	forumUcase forum.ForumUsecase
 }
 
-func NewPostUcase(repos post.PostRepository, userUcase user.UserUsecase, threadUcase threads.ThreadUsecase) *PostUcase {
+func NewPostUcase(repos post.PostRepository, userUcase user.UserUsecase,
+	threadUcase threads.ThreadUsecase, forumUcase forum.ForumUsecase) *PostUcase {
 	return &PostUcase{
 		postRepos: repos,
 		userUcase:   userUcase,
 		threadUcase:  threadUcase,
+		forumUcase: forumUcase,
 	}
+}
+
+func (pUc *PostUcase) GetPostAuthor(nickname string) (*models.User, error) {
+	foundUser, err := pUc.userUcase.GetByNickname(nickname)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return foundUser, nil
+}
+
+func (pUc *PostUcase) GetPostThread(threadId int) (*models.Thread, error) {
+	foundThread, err := pUc.threadUcase.GetById(threadId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return foundThread, nil
+}
+
+func (pUc *PostUcase) GetPostForum(forumSlug string) (*models.Forum, error) {
+	foundForum, err := pUc.forumUcase.GetBySlug(forumSlug)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return foundForum, nil
 }
 
 func (pUc *PostUcase) Create(posts []*models.Post, slugOrId string) ([]*models.Post, error) {
@@ -29,32 +63,30 @@ func (pUc *PostUcase) Create(posts []*models.Post, slugOrId string) ([]*models.P
 		return nil, nil
 	}
 
-	var resultPosts []*models.Post
+	foundThr := &models.Thread{}
 
-	for _, pst := range posts {
-		id, err := strconv.Atoi(slugOrId)
-		if err == nil {
-			foundThr, _ := pUc.threadUcase.GetById(id)
-			if foundThr == nil {
-				return nil, ErrNotFound
-			}
-			pst.ForumSlug = foundThr.ForumSlug
-			pst.Thread = id
-		} else {
-			foundThr, _ := pUc.threadUcase.GetBySlug(slugOrId)
-			if foundThr == nil {
-				return nil, ErrNotFound
-			}
-			pst.ForumSlug = foundThr.ForumSlug
-			pst.Thread = foundThr.Id
+	id, err := strconv.Atoi(slugOrId)
+	if err == nil {
+		foundThr, _ = pUc.threadUcase.GetById(id)
+		if foundThr == nil {
+			return nil, ErrNotFound
+		}
+	} else {
+		foundThr, _ = pUc.threadUcase.GetBySlug(slugOrId)
+		if foundThr == nil {
+			return nil, ErrNotFound
 		}
 	}
 
+	var resultPosts []*models.Post
+
 	createdAt := time.Now().Format(time.RFC3339)
-	resultPosts, err := pUc.postRepos.InsertManyInto(posts, createdAt)
+	resultPosts, err = pUc.postRepos.InsertManyInto(posts, foundThr, createdAt)
 	if  err != nil {
 		return nil, err
 	}
+
+	err = pUc.forumUcase.UpdatePostsCount(len(posts), foundThr.ForumSlug)
 
 	return resultPosts, nil
 }
@@ -129,7 +161,7 @@ func (pUc *PostUcase) GetPosts(slugOrId string, limit int, desc bool, since stri
 	case "tree":
 		posts, err = pUc.postRepos.SelectPostsTree(id, limit, desc, since)
 	case "parent_tree":
-		//posts, err = pUc.postRepos.SelectPostsParentTree(id, limit, desc, since)
+		posts, err = pUc.postRepos.SelectPostsParentTree(id, limit, desc, since)
 	default:
 		posts, err = pUc.postRepos.SelectPostsFlat(id, limit, desc, since)
 	}

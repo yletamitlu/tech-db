@@ -11,6 +11,7 @@ import (
 	"github.com/yletamitlu/tech-db/internal/post"
 	. "github.com/yletamitlu/tech-db/tools"
 	"strconv"
+	"strings"
 )
 
 type PostDelivery struct {
@@ -87,6 +88,7 @@ func (pd *PostDelivery) createPostHandler() fasthttp.RequestHandler {
 func (pd *PostDelivery) getPostHandler() fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 		idStr, _ := ctx.UserValue("id").(string)
+		related := string(ctx.QueryArgs().Peek("related"))
 
 		id, _ := strconv.Atoi(idStr)
 
@@ -109,11 +111,58 @@ func (pd *PostDelivery) getPostHandler() fasthttp.RequestHandler {
 		}
 
 		type wrapper struct {
-			Post *models.Post `json:"post"`
+			Post   *models.Post   `json:"post"`
+			Author *models.User   `json:"author,omitempty"`
+			Thread *models.Thread `json:"thread,omitempty"`
+			Forum  *models.Forum  `json:"forum,omitempty"`
 		}
 
 		postWrapper := &wrapper{
 			Post: found,
+		}
+
+		if related != "" {
+			if strings.Contains(related, "user") {
+				foundAuthor, err := pd.postUcase.GetPostAuthor(found.AuthorNickname)
+
+				if err != nil {
+					logrus.Info(err)
+					SendResponse(ctx, 500, &ErrorResponse{
+						Message: ErrInternal.Error(),
+					})
+					return
+				}
+
+				postWrapper.Author = foundAuthor
+			}
+
+			if strings.Contains(related, "thread") {
+				foundThread, err := pd.postUcase.GetPostThread(found.Thread)
+
+				if err != nil {
+					logrus.Info(err)
+					SendResponse(ctx, 500, &ErrorResponse{
+						Message: ErrInternal.Error(),
+					})
+					return
+				}
+
+				postWrapper.Thread = foundThread
+			}
+
+			if strings.Contains(related, "forum") {
+				foundForum, err := pd.postUcase.GetPostForum(found.ForumSlug)
+
+				if err != nil {
+					logrus.Info(err)
+					SendResponse(ctx, 500, &ErrorResponse{
+						Message: ErrInternal.Error(),
+					})
+					return
+				}
+
+				postWrapper.Forum = foundForum
+			}
 		}
 
 		SendResponse(ctx, 200, postWrapper)

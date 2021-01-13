@@ -9,4 +9,5 @@ type Post struct {
 	IsEdited       bool   `json:"isEdited" db:"is_edited"`
 	Thread         int    `json:"thread,omitempty" db:"thread_id"`
 	Parent         int    `json:"parent"`
+	Path           string `json:"-"`
 }
