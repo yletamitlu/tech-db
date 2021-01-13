@@ -119,12 +119,16 @@ func (pr *PostPgRepos) makeChunks(posts []*models.Post) [][]*models.Post {
 	return chunks
 }
 
-func (pr *PostPgRepos) Update(updatedPost *models.Post) {
-	_, _ = pr.conn.Exec(`UPDATE threads SET author_nickname = $1,
-                   message = $2 where id = $3`,
-		updatedPost.AuthorNickname,
+func (pr *PostPgRepos) Update(updatedPost *models.Post) error {
+	_, err := pr.conn.Exec(`UPDATE posts SET message = $1, is_edited = true where id = $2`,
 		updatedPost.Message,
 		updatedPost.Id)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (pr *PostPgRepos) SelectPostsFlat(id int, limit int, desc bool, since string) ([]*models.Post, error) {

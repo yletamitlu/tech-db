@@ -2,7 +2,6 @@ package delivery
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/buaazp/fasthttprouter"
 	"github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
@@ -26,9 +25,9 @@ func NewPostDelivery(pUc post.PostUsecase) *PostDelivery {
 
 func (pd *PostDelivery) Configure(router *fasthttprouter.Router) {
 	router.POST("/api/thread/:slug/create", pd.createPostHandler())
-	router.GET("/api/post/:slug/details", pd.getPostHandler())
 	router.GET("/api/thread/:slug/posts", pd.getPostsHandler())
-	router.PUT("/api/post/:id/details", pd.updatePost())
+	router.POST("/api/post/:id/details", pd.updatePost())
+	router.GET("/api/post/:id/details", pd.getPostHandler())
 }
 
 func (pd *PostDelivery) createPostHandler() fasthttp.RequestHandler {
@@ -87,10 +86,11 @@ func (pd *PostDelivery) createPostHandler() fasthttp.RequestHandler {
 
 func (pd *PostDelivery) getPostHandler() fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
-		fmt.Println(ctx.URI())
-		slug, _ := ctx.UserValue("slug").(string)
+		idStr, _ := ctx.UserValue("id").(string)
 
-		found, err := pd.postUcase.GetByForumSlug(slug)
+		id, _ := strconv.Atoi(idStr)
+
+		found, err := pd.postUcase.GetById(id)
 
 		if found == nil {
 			logrus.Info(err)
@@ -108,7 +108,15 @@ func (pd *PostDelivery) getPostHandler() fasthttp.RequestHandler {
 			return
 		}
 
-		SendResponse(ctx, 200, found)
+		type wrapper struct {
+			Post *models.Post `json:"post"`
+		}
+
+		postWrapper := &wrapper{
+			Post: found,
+		}
+
+		SendResponse(ctx, 200, postWrapper)
 		return
 	}
 }
@@ -126,7 +134,7 @@ func (pd *PostDelivery) getPostsHandler() fasthttp.RequestHandler {
 
 		posts, err := pd.postUcase.GetPosts(slugOrId, limit, desc, since, sort)
 
-		if posts == nil {
+		if err == ErrNotFound {
 			logrus.Info(err)
 			SendResponse(ctx, 404, &ErrorResponse{
 				Message: ErrNotFound.Error(),
@@ -142,6 +150,13 @@ func (pd *PostDelivery) getPostsHandler() fasthttp.RequestHandler {
 			return
 		}
 
+		if posts == nil {
+			var posts []*models.Post
+			posts = []*models.Post{}
+			SendResponse(ctx, 200, posts)
+			return
+		}
+
 		SendResponse(ctx, 200, posts)
 		return
 	}
@@ -149,8 +164,9 @@ func (pd *PostDelivery) getPostsHandler() fasthttp.RequestHandler {
 
 func (pd *PostDelivery) updatePost() fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
-		id, _ := ctx.UserValue("id").(int)
+		idStr, _ := ctx.UserValue("id").(string)
 
+		id, _ := strconv.Atoi(idStr)
 		pst := &models.Post{
 			Id: id,
 		}

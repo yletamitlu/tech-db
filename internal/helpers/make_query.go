@@ -9,9 +9,9 @@ func MakeQuery(values []interface{}, query string, limit int, desc bool, since s
 
 	if since != "" {
 		if desc {
-			query += fmt.Sprintf(" and created_at <= $%d", i)
+			query += fmt.Sprintf(" and id < $%d", i)
 		} else {
-			query += fmt.Sprintf(" and created_at >= $%d", i)
+			query += fmt.Sprintf(" and id > $%d", i)
 		}
 		i++
 		values = append(values, since)

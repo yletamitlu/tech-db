@@ -90,11 +90,26 @@ func (pUc *PostUcase) GetByThreadId(id int) ([]*models.Post, error) {
 }
 
 func (pUc *PostUcase) Update(updatedPost *models.Post) (*models.Post, error) {
-	pUc.postRepos.Update(updatedPost)
+	found, _ := pUc.postRepos.SelectById(updatedPost.Id)
 
-	u, _ := pUc.postRepos.SelectById(updatedPost.Id)
+	if found == nil {
+		return nil, ErrNotFound
+	}
 
-	return u, nil
+	if updatedPost.Message == "" || updatedPost.Message == found.Message {
+		return found, nil
+	}
+
+	err := pUc.postRepos.Update(updatedPost)
+
+	if err != nil {
+		return nil, err
+	}
+
+	found.Message = updatedPost.Message
+	found.IsEdited = true
+
+	return found, nil
 }
 
 func (pUc *PostUcase) GetPosts(slugOrId string, limit int, desc bool, since string, sort string) ([]*models.Post, error) {
