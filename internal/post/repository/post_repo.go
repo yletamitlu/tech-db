@@ -3,7 +3,6 @@ package repository
 import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
-	"github.com/yletamitlu/tech-db/internal/consts"
 	. "github.com/yletamitlu/tech-db/internal/helpers"
 	"github.com/yletamitlu/tech-db/internal/models"
 	"github.com/yletamitlu/tech-db/internal/post"
@@ -11,22 +10,13 @@ import (
 	"strings"
 )
 
-const (
-	pathItemLen = 8
-	nullPathItem = "00000000"
-	maxNesting = 5
-	pathItemsSeparator = "."
-)
-
 type PostPgRepos struct {
-	conn             *sqlx.DB
-	postIdsGenerator *Generator
+	conn *sqlx.DB
 }
 
 func NewPostRepository(conn *sqlx.DB) post.PostRepository {
 	return &PostPgRepos{
-		conn:             conn,
-		postIdsGenerator: NewGenerator(),
+		conn: conn,
 	}
 }
 
@@ -69,110 +59,52 @@ func (pr *PostPgRepos) InsertInto(post *models.Post) (*models.Post, error) {
 	return post, nil
 }
 
-func (pr *PostPgRepos) InsertManyInto(posts []*models.Post, thread *models.Thread, createdAt string) ([]*models.Post, error) {
+func (pr *PostPgRepos) InsertManyInto(posts []*models.Post) ([]*models.Post, error) {
 	var queryStringAdditional string
 	var args []interface{}
 
 	queryStringMain := "INSERT INTO posts (author_nickname, forum_slug, message, thread_id, id, parent, created_at, path) VALUES "
 
-	chunks := pr.makeChunks(posts)
-
 	numb := 1
 
-	for _, chunk := range chunks {
-		ids := pr.postIdsGenerator.Next(len(chunk))
-		for i, pst := range chunk {
-			queryStringAdditional = ""
+	for i, pst := range posts {
+		queryStringAdditional = ""
 
-			pst.Id = ids[i]
+		queryStringAdditional = fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)",
+			numb, numb+1, numb+2, numb+3, numb+4, numb+5, numb+6, numb+7)
 
-			queryStringAdditional = fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)",
-				numb, numb+1, numb+2, numb+3, numb+4, numb+5, numb+6, numb+7)
-
-			if i + 1 < len(chunk) {
-				queryStringAdditional += ","
-			}
-
-			queryStringMain += queryStringAdditional
-
-			pst.Created = createdAt
-			pst.ForumSlug = thread.ForumSlug
-			pst.Thread = thread.Id
-			path, err := pr.createPath(pst.Id, pst.Parent)
-
-			if err != nil {
-				return nil, err
-			}
-
-			pst.Path = path
-
-			args = append(args, pst.AuthorNickname,
-				pst.ForumSlug, pst.Message, pst.Thread,
-				pst.Id, pst.Parent, pst.Created, pst.Path)
-
-			numb = numb + 8
+		if i + 1 < len(posts) {
+			queryStringAdditional += ","
 		}
 
-		_, err := pr.conn.Exec(queryStringMain, args...)
+		queryStringMain += queryStringAdditional
 
-		if err != nil {
-			return nil, err
-		}
+		args = append(args, pst.AuthorNickname,
+			pst.ForumSlug, pst.Message, pst.Thread,
+			pst.Id, pst.Parent, pst.Created, pst.Path)
+
+		numb = numb + 8
+	}
+
+	_, err := pr.conn.Exec(queryStringMain, args...)
+
+	if err != nil {
+		return nil, err
 	}
 
 	return posts, nil
 }
 
-func (pr *PostPgRepos) createPath(postId int, parentId int) (string, error) {
-	currentIdStr := strconv.Itoa(postId)
-	pathItem := strings.Repeat("0", pathItemLen - len(currentIdStr)) + currentIdStr
-
-	if parentId == 0 {
-		pathItems := []string{pathItem}
-
-		for i := 0; i < maxNesting - 1; i++ {
-			pathItems = append(pathItems, nullPathItem)
-		}
-
-		return strings.Join(pathItems, pathItemsSeparator), nil
-	}
-
-	foundParent, err := pr.SelectById(parentId)
-
-	if err != nil {
-		return "", consts.ErrNotFound
-	}
-
-	return strings.Replace(foundParent.Path, nullPathItem, pathItem, 1), nil
-}
-
 func (pr *PostPgRepos) extractParentPath(path string) string {
-	parentPathItem := strings.Split(path, pathItemsSeparator)[0]
+	parentPathItem := strings.Split(path, PathItemsSeparator)[0]
 
 	pathItems := []string{parentPathItem}
 
-	for i := 0; i < maxNesting - 1; i++ {
-		pathItems = append(pathItems, nullPathItem)
+	for i := 0; i < MaxNesting - 1; i++ {
+		pathItems = append(pathItems, NullPathItem)
 	}
 
-	return strings.Join(pathItems, pathItemsSeparator)
-}
-
-func (pr *PostPgRepos) makeChunks(posts []*models.Post) [][]*models.Post {
-	postsChunk := 100
-	var chunks [][]*models.Post
-
-	for i := 0; i < len(posts); i += postsChunk {
-		bound := i + postsChunk
-
-		if bound > len(posts) {
-			bound = len(posts)
-		}
-
-		chunks = append(chunks, posts[i:bound])
-	}
-
-	return chunks
+	return strings.Join(pathItems, PathItemsSeparator)
 }
 
 func (pr *PostPgRepos) Update(updatedPost *models.Post) error {
@@ -295,11 +227,11 @@ func (pr *PostPgRepos) SelectPostsParentTree(id int, limit int, desc bool, since
 	for _, parent := range parentPosts {
 		var children []*models.Post
 
-		parentPathItem := strings.Split(parent.Path, pathItemsSeparator)[0]
+		parentPathItem := strings.Split(parent.Path, PathItemsSeparator)[0]
 
 		if err := pr.conn.Select(&children, "SELECT * FROM posts where substring(path, 1, 8) = $1 order by path",
 			parentPathItem);
-		err != nil {
+			err != nil {
 			return nil, PgxErrToCustom(err)
 		}
 

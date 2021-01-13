@@ -9,7 +9,7 @@ type PostRepository interface {
 	SelectByForumSlug(slug string) ([]*models.Post, error)
 
 	InsertInto(post *models.Post) (*models.Post, error)
-	InsertManyInto(posts []*models.Post, thread *models.Thread, createdAt string) ([]*models.Post, error)
+	InsertManyInto(posts []*models.Post) ([]*models.Post, error)
 
 	Update(updatedPost *models.Post) error
 

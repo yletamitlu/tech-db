@@ -3,11 +3,13 @@ package usecase
 import (
 	. "github.com/yletamitlu/tech-db/internal/consts"
 	"github.com/yletamitlu/tech-db/internal/forum"
+	. "github.com/yletamitlu/tech-db/internal/helpers"
 	"github.com/yletamitlu/tech-db/internal/models"
 	"github.com/yletamitlu/tech-db/internal/post"
 	"github.com/yletamitlu/tech-db/internal/threads"
 	"github.com/yletamitlu/tech-db/internal/user"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -16,6 +18,7 @@ type PostUcase struct {
 	userUcase user.UserUsecase
 	threadUcase threads.ThreadUsecase
 	forumUcase forum.ForumUsecase
+	postIdsGenerator *Generator
 }
 
 func NewPostUcase(repos post.PostRepository, userUcase user.UserUsecase,
@@ -25,6 +28,7 @@ func NewPostUcase(repos post.PostRepository, userUcase user.UserUsecase,
 		userUcase:   userUcase,
 		threadUcase:  threadUcase,
 		forumUcase: forumUcase,
+		postIdsGenerator: NewGenerator(),
 	}
 }
 
@@ -59,10 +63,6 @@ func (pUc *PostUcase) GetPostForum(forumSlug string) (*models.Forum, error) {
 }
 
 func (pUc *PostUcase) Create(posts []*models.Post, slugOrId string) ([]*models.Post, error) {
-	if len(posts) == 0 {
-		return nil, nil
-	}
-
 	foundThr := &models.Thread{}
 
 	id, err := strconv.Atoi(slugOrId)
@@ -78,10 +78,60 @@ func (pUc *PostUcase) Create(posts []*models.Post, slugOrId string) ([]*models.P
 		}
 	}
 
+	if len(posts) == 0 {
+		return nil, nil
+	}
+
+	err = nil
+
 	var resultPosts []*models.Post
 
 	createdAt := time.Now().Format(time.RFC3339)
-	resultPosts, err = pUc.postRepos.InsertManyInto(posts, foundThr, createdAt)
+
+	chunks := pUc.makeChunks(posts)
+
+	for _, chunk := range chunks {
+		ids := pUc.postIdsGenerator.Next(len(chunk))
+		for i, pst := range chunk {
+			pst.Id = ids[i]
+
+			foundAuthor, err := pUc.userUcase.GetByNickname(pst.AuthorNickname)
+
+			if foundAuthor == nil {
+				return nil, ErrNotFound
+			}
+
+			if  err != nil {
+				return nil, err
+			}
+
+			pst.Created = createdAt
+			pst.ForumSlug = foundThr.ForumSlug
+			pst.Thread = foundThr.Id
+
+			if pst.Parent > 0 {
+				foundParent, err := pUc.postRepos.SelectById(pst.Parent)
+
+				if (foundParent != nil && foundParent.Thread != pst.Thread) || err != nil {
+					return nil, ErrConflict
+				}
+			}
+
+			path, err := pUc.createPath(pst.Id, pst.Parent)
+
+			if err != nil {
+				return nil, err
+			}
+
+			pst.Path = path
+		}
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	resultPosts, err = pUc.postRepos.InsertManyInto(posts)
 	if  err != nil {
 		return nil, err
 	}
@@ -89,6 +139,46 @@ func (pUc *PostUcase) Create(posts []*models.Post, slugOrId string) ([]*models.P
 	err = pUc.forumUcase.UpdatePostsCount(len(posts), foundThr.ForumSlug)
 
 	return resultPosts, nil
+}
+
+func (pUc *PostUcase) createPath(postId int, parentId int) (string, error) {
+	currentIdStr := strconv.Itoa(postId)
+	pathItem := strings.Repeat("0", PathItemLen - len(currentIdStr)) + currentIdStr
+
+	if parentId == 0 {
+		pathItems := []string{pathItem}
+
+		for i := 0; i < MaxNesting - 1; i++ {
+			pathItems = append(pathItems, NullPathItem)
+		}
+
+		return strings.Join(pathItems, PathItemsSeparator), nil
+	}
+
+	foundParent, err := pUc.postRepos.SelectById(parentId)
+
+	if err != nil {
+		return "", ErrNotFound
+	}
+
+	return strings.Replace(foundParent.Path, NullPathItem, pathItem, 1), nil
+}
+
+func (pUc *PostUcase) makeChunks(posts []*models.Post) [][]*models.Post {
+	postsChunk := 100
+	var chunks [][]*models.Post
+
+	for i := 0; i < len(posts); i += postsChunk {
+		bound := i + postsChunk
+
+		if bound > len(posts) {
+			bound = len(posts)
+		}
+
+		chunks = append(chunks, posts[i:bound])
+	}
+
+	return chunks
 }
 
 func (pUc *PostUcase) GetById(id int) (*models.Post, error) {
@@ -148,6 +238,14 @@ func (pUc *PostUcase) GetPosts(slugOrId string, limit int, desc bool, since stri
 	id, err := strconv.Atoi(slugOrId)
 	if err != nil {
 		foundThr, _ := pUc.threadUcase.GetBySlug(slugOrId)
+		if foundThr == nil {
+			return nil, ErrNotFound
+		}
+
+		id = foundThr.Id
+	} else {
+		foundThr, _ := pUc.threadUcase.GetById(id)
+
 		if foundThr == nil {
 			return nil, ErrNotFound
 		}

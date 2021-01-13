@@ -192,6 +192,14 @@ func (td *ThreadDelivery) voteThreadsHandler() fasthttp.RequestHandler {
 
 		changed, err := td.threadUcase.CreateVote(vote, slug)
 
+		if err == ErrNotFound {
+			logrus.Info(err)
+			SendResponse(ctx, 404, &ErrorResponse{
+				Message: ErrNotFound.Error(),
+			})
+			return
+		}
+
 		if err != nil {
 			logrus.Info(err)
 			SendResponse(ctx, 500, &ErrorResponse{

@@ -57,7 +57,7 @@ func (pd *PostDelivery) createPostHandler() fasthttp.RequestHandler {
 			return
 		}
 
-		if err == ErrAlreadyExists {
+		if err == ErrAlreadyExists || err == ErrConflict {
 			logrus.Info(err)
 			SendResponse(ctx, 409, &ErrorResponse{
 				Message: ErrAlreadyExists.Error(),
