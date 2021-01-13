@@ -23,18 +23,26 @@ func NewVoteUcase(repos vote.VoteRepository, usRepo user.UserRepository) vote.Vo
 func (vUc *VoteUcase) Create(vote *models.Vote) (int, error) {
 	foundUser, _ := vUc.userRepo.SelectByNickname(vote.AuthorNickname)
 
-	found, _ := vUc.voteRepos.SelectByThreadAndUser(vote)
-
-	if foundUser == nil || found == nil {
+	if foundUser == nil {
 		return 0, consts.ErrNotFound
 	}
 
-	if err := vUc.voteRepos.Update(vote); err != nil {
-		return 0, err
-	}
+	found, _ := vUc.voteRepos.SelectByThreadAndUser(vote)
 
-	if vote.Voice == 1 {
-		return 1, nil
+	if found != nil {
+		if found.Voice == vote.Voice {
+			return 0, nil
+		}
+
+		if err := vUc.voteRepos.Update(vote); err != nil {
+			return 0, err
+		}
+
+		if vote.Voice == 1 {
+			return 1, nil
+		}
+
+		return -1, nil
 	}
 
 	if err := vUc.voteRepos.InsertInto(vote); err != nil {
