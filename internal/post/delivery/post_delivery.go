@@ -28,6 +28,7 @@ func (pd *PostDelivery) Configure(router *fasthttprouter.Router) {
 	router.POST("/api/thread/:slug/create", pd.createPostHandler())
 	router.GET("/api/post/:slug/details", pd.getPostHandler())
 	router.GET("/api/thread/:slug/posts", pd.getPostsHandler())
+	router.PUT("/api/post/:id/details", pd.updatePost())
 }
 
 func (pd *PostDelivery) createPostHandler() fasthttp.RequestHandler {
@@ -48,10 +49,11 @@ func (pd *PostDelivery) createPostHandler() fasthttp.RequestHandler {
 
 		resultPosts, err := pd.postUcase.Create(posts, slugStr)
 
-		if resultPosts == nil {
-			var posts []*models.Post
-			posts = []*models.Post{}
-			SendResponse(ctx, 201, posts)
+		if err == ErrNotFound {
+			logrus.Info(err)
+			SendResponse(ctx, 404, &ErrorResponse{
+				Message: ErrNotFound.Error(),
+			})
 			return
 		}
 
@@ -60,6 +62,13 @@ func (pd *PostDelivery) createPostHandler() fasthttp.RequestHandler {
 			SendResponse(ctx, 409, &ErrorResponse{
 				Message: ErrAlreadyExists.Error(),
 			})
+			return
+		}
+
+		if resultPosts == nil {
+			var posts []*models.Post
+			posts = []*models.Post{}
+			SendResponse(ctx, 201, posts)
 			return
 		}
 
@@ -134,6 +143,39 @@ func (pd *PostDelivery) getPostsHandler() fasthttp.RequestHandler {
 		}
 
 		SendResponse(ctx, 200, posts)
+		return
+	}
+}
+
+func (pd *PostDelivery) updatePost() fasthttp.RequestHandler {
+	return func(ctx *fasthttp.RequestCtx) {
+		id, _ := ctx.UserValue("id").(int)
+
+		pst := &models.Post{
+			Id: id,
+		}
+
+		err := json.Unmarshal(ctx.Request.Body(), &pst)
+
+		if err != nil {
+			logrus.Info(err)
+			SendResponse(ctx, 500, &ErrorResponse{
+				Message: ErrInternal.Error(),
+			})
+			return
+		}
+
+		pst, err = pd.postUcase.Update(pst)
+
+		if err == ErrNotFound {
+			logrus.Info(err)
+			SendResponse(ctx, 404, &ErrorResponse{
+				Message: ErrNotFound.Error(),
+			})
+			return
+		}
+
+		SendResponse(ctx, 200, pst)
 		return
 	}
 }

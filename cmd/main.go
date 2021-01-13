@@ -74,7 +74,7 @@ func main() {
 	forumDelivery := forumD.NewForumDelivery(forumUcase)
 
 	voteRepos := voteR.NewVoteRepository(conn)
-	voteUcase := voteU.NewVoteUcase(voteRepos)
+	voteUcase := voteU.NewVoteUcase(voteRepos, userRepos)
 
 	threadRepos := threadR.NewThreadRepository(conn)
 	threadUcase := threadU.NewThreadUcase(threadRepos, userUcase, forumUcase, voteUcase)

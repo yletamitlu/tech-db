@@ -59,11 +59,11 @@ func (pr *PostPgRepos) InsertInto(post *models.Post) (*models.Post, error) {
 	return post, nil
 }
 
-func (pr *PostPgRepos) InsertManyInto(posts []*models.Post) ([]*models.Post, error) {
-	var queryString string
+func (pr *PostPgRepos) InsertManyInto(posts []*models.Post, createdAt string) ([]*models.Post, error) {
+	var queryStringAdditional string
 	var args []interface{}
 
-	queryString = "INSERT INTO posts (author_nickname, forum_slug, message, created_at, thread_id, id) VALUES "
+	queryStringMain := "INSERT INTO posts (author_nickname, forum_slug, message, thread_id, id, parent, created_at) VALUES "
 
 	chunks := pr.makeChunks(posts)
 
@@ -72,19 +72,31 @@ func (pr *PostPgRepos) InsertManyInto(posts []*models.Post) ([]*models.Post, err
 	for _, chunk := range chunks {
 		ids := pr.postIdsGenerator.Next(len(chunk))
 		for i, pst := range chunk {
-			queryString = ""
+			queryStringAdditional = ""
 
 			pst.Id = ids[i]
 
-			queryString += fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d)",
-				numb, numb + 1, numb + 2, numb + 3, numb + 4, numb + 5)
+			queryStringAdditional = fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d, $%d)",
+				numb, numb + 1, numb + 2, numb + 3, numb + 4, numb + 5, numb + 6)
 
-			args = append(args, pst.AuthorNickname, pst.ForumSlug, pst.Message, pst.Created, pst.Thread, pst.Id)
+			if i + 1 < len(chunk) {
+				queryStringAdditional += ","
+			}
 
-			numb = numb + 5
+			queryStringMain += queryStringAdditional
+
+			pst.Created = createdAt
+
+			args = append(args, pst.AuthorNickname, pst.ForumSlug, pst.Message, pst.Thread, pst.Id, pst.Parent, pst.Created)
+
+			numb = numb + 7
 		}
 
-		pr.conn.QueryRow(queryString, args...)
+		_, err := pr.conn.Exec(queryStringMain, args...)
+
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return posts, nil
@@ -115,13 +127,37 @@ func (pr *PostPgRepos) Update(updatedPost *models.Post) {
 		updatedPost.Id)
 }
 
-//func (pr *PostPgRepos) SelectPostsFlat(id int, limit int, desc bool, since string) ([]*models.Post, error) {
-//
-//}
-//
-//func (pr *PostPgRepos) SelectPostsTree(id int, limit int, desc bool, since string) ([]*models.Post, error) {
-//
-//}
+func (pr *PostPgRepos) SelectPostsFlat(id int, limit int, desc bool, since string) ([]*models.Post, error) {
+	var posts []*models.Post
+
+	queryString := "SELECT * from posts where thread_id = $1"
+	var values []interface{}
+	values = append(values, id)
+
+	query, val := MakeQuery(values, queryString, limit, desc, since)
+
+	if err := pr.conn.Select(&posts, query, val...); err != nil {
+		return nil, PgxErrToCustom(err)
+	}
+
+	return posts, nil
+}
+
+func (pr *PostPgRepos) SelectPostsTree(id int, limit int, desc bool, since string) ([]*models.Post, error) {
+	var posts []*models.Post
+
+	queryString := "SELECT * from posts where thread_id = $1"
+	var values []interface{}
+	values = append(values, id)
+
+	query, val := MakeQuery(values, queryString, limit, desc, since)
+
+	if err := pr.conn.Select(&posts, query, val...); err != nil {
+		return nil, PgxErrToCustom(err)
+	}
+
+	return posts, nil
+}
 //
 //func (pr *PostPgRepos) SelectPostsParentTree(id int, limit int, desc bool, since string) ([]*models.Post, error) {
 //

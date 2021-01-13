@@ -1,13 +1,13 @@
 package usecase
 
 import (
-	"fmt"
 	. "github.com/yletamitlu/tech-db/internal/consts"
 	"github.com/yletamitlu/tech-db/internal/models"
 	"github.com/yletamitlu/tech-db/internal/post"
 	"github.com/yletamitlu/tech-db/internal/threads"
 	"github.com/yletamitlu/tech-db/internal/user"
 	"strconv"
+	"time"
 )
 
 type PostUcase struct {
@@ -50,7 +50,8 @@ func (pUc *PostUcase) Create(posts []*models.Post, slugOrId string) ([]*models.P
 		}
 	}
 
-	resultPosts, err := pUc.postRepos.InsertManyInto(posts)
+	createdAt := time.Now().Format(time.RFC3339)
+	resultPosts, err := pUc.postRepos.InsertManyInto(posts, createdAt)
 	if  err != nil {
 		return nil, err
 	}
@@ -109,15 +110,13 @@ func (pUc *PostUcase) GetPosts(slugOrId string, limit int, desc bool, since stri
 
 	var posts []*models.Post
 
-	fmt.Println(id)
-
 	switch sort {
 	case "tree":
-		//posts, err = pUc.postRepos.SelectPostsTree(id, limit, desc, since)
+		posts, err = pUc.postRepos.SelectPostsTree(id, limit, desc, since)
 	case "parent_tree":
 		//posts, err = pUc.postRepos.SelectPostsParentTree(id, limit, desc, since)
 	default:
-		//posts, err = pUc.postRepos.SelectPostsFlat(id, limit, desc, since)
+		posts, err = pUc.postRepos.SelectPostsFlat(id, limit, desc, since)
 	}
 
 	if err != nil {

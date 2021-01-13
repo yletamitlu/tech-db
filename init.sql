@@ -48,6 +48,6 @@ CREATE TABLE IF NOT EXISTS posts
     author_nickname citext REFERENCES users (nickname) ON DELETE CASCADE,
     forum_slug      citext REFERENCES forums (slug) ON DELETE CASCADE,
     thread_id       integer NOT NULL DEFAULT 0 REFERENCES threads (id) ON DELETE CASCADE,
-    parent          integer REFERENCES posts (id) ON DELETE CASCADE,
+    parent          integer NOT NULL DEFAULT 0,
     is_edited       boolean NOT NULL DEFAULT false
 )
