@@ -24,6 +24,9 @@ import (
 
 	voteR "github.com/yletamitlu/tech-db/internal/vote/repository"
 	voteU "github.com/yletamitlu/tech-db/internal/vote/usecase"
+
+	additionsD "github.com/yletamitlu/tech-db/internal/additions/delivery"
+	additionsR "github.com/yletamitlu/tech-db/internal/additions/repository"
 	"log"
 )
 
@@ -84,10 +87,14 @@ func main() {
 	postUcase := postU.NewPostUcase(postRepos, userUcase, threadUcase, forumUcase)
 	postDelivery := postD.NewPostDelivery(postUcase)
 
+	additionsRepos := additionsR.NewAdditionRepository(conn)
+	additionsDelivery := additionsD.NewAdditionsDelivery(additionsRepos)
+
 	userDelivery.Configure(router)
 	threadDelivery.Configure(router)
 	forumDelivery.Configure(router)
 	postDelivery.Configure(router)
+	additionsDelivery.Configure(router)
 
 	crutchRouter := NewCrutchRouter(router, forumDelivery)
 
