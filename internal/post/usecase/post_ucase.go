@@ -3,32 +3,28 @@ package usecase
 import (
 	. "github.com/yletamitlu/tech-db/internal/consts"
 	"github.com/yletamitlu/tech-db/internal/forum"
-	. "github.com/yletamitlu/tech-db/internal/helpers"
 	"github.com/yletamitlu/tech-db/internal/models"
 	"github.com/yletamitlu/tech-db/internal/post"
 	"github.com/yletamitlu/tech-db/internal/threads"
 	"github.com/yletamitlu/tech-db/internal/user"
 	"strconv"
-	"strings"
 	"time"
 )
 
 type PostUcase struct {
-	postRepos post.PostRepository
-	userUcase user.UserUsecase
-	threadUcase threads.ThreadUsecase
-	forumUcase forum.ForumUsecase
-	postIdsGenerator *Generator
+	postRepos        post.PostRepository
+	userUcase        user.UserUsecase
+	threadUcase      threads.ThreadUsecase
+	forumUcase       forum.ForumUsecase
 }
 
 func NewPostUcase(repos post.PostRepository, userUcase user.UserUsecase,
 	threadUcase threads.ThreadUsecase, forumUcase forum.ForumUsecase) *PostUcase {
 	return &PostUcase{
-		postRepos: repos,
-		userUcase:   userUcase,
-		threadUcase:  threadUcase,
-		forumUcase: forumUcase,
-		postIdsGenerator: NewGenerator(),
+		postRepos:        repos,
+		userUcase:        userUcase,
+		threadUcase:      threadUcase,
+		forumUcase:       forumUcase,
 	}
 }
 
@@ -84,101 +80,45 @@ func (pUc *PostUcase) Create(posts []*models.Post, slugOrId string) ([]*models.P
 
 	err = nil
 
-	var resultPosts []*models.Post
-
 	createdAt := time.Now().Format(time.RFC3339)
 
-	chunks := pUc.makeChunks(posts)
+	for _, pst := range posts {
+		foundAuthor, err := pUc.userUcase.GetByNickname(pst.AuthorNickname)
 
-	for _, chunk := range chunks {
-		ids := pUc.postIdsGenerator.Next(len(chunk))
-		for i, pst := range chunk {
-			pst.Id = ids[i]
-
-			foundAuthor, err := pUc.userUcase.GetByNickname(pst.AuthorNickname)
-
-			if foundAuthor == nil {
-				return nil, ErrNotFound
-			}
-
-			if  err != nil {
-				return nil, err
-			}
-
-			pst.Created = createdAt
-			pst.ForumSlug = foundThr.ForumSlug
-			pst.Thread = foundThr.Id
-
-			if pst.Parent > 0 {
-				foundParent, err := pUc.postRepos.SelectById(pst.Parent)
-
-				if (foundParent != nil && foundParent.Thread != pst.Thread) || err != nil {
-					return nil, ErrConflict
-				}
-			}
-
-			path, err := pUc.createPath(pst.Id, pst.Parent)
-
-			if err != nil {
-				return nil, err
-			}
-
-			pst.Path = path
+		if foundAuthor == nil {
+			return nil, ErrNotFound
 		}
 
 		if err != nil {
 			return nil, err
 		}
+
+		pst.Created = createdAt
+		pst.ForumSlug = foundThr.ForumSlug
+		pst.Thread = foundThr.Id
+
+		if pst.Parent > 0 {
+			foundParent, err := pUc.postRepos.SelectById(pst.Parent)
+
+			if (foundParent != nil && foundParent.Thread != pst.Thread) || err != nil {
+				return nil, ErrConflict
+			}
+		}
 	}
 
-	resultPosts, err = pUc.postRepos.InsertManyInto(posts)
-	if  err != nil {
+	err = pUc.postRepos.InsertManyInto(posts)
+
+	if err != nil {
 		return nil, err
 	}
 
 	err = pUc.forumUcase.UpdatePostsCount(len(posts), foundThr.ForumSlug)
 
-	return resultPosts, nil
-}
-
-func (pUc *PostUcase) createPath(postId int, parentId int) (string, error) {
-	currentIdStr := strconv.Itoa(postId)
-	pathItem := strings.Repeat("0", PathItemLen - len(currentIdStr)) + currentIdStr
-
-	if parentId == 0 {
-		pathItems := []string{pathItem}
-
-		for i := 0; i < MaxNesting - 1; i++ {
-			pathItems = append(pathItems, NullPathItem)
-		}
-
-		return strings.Join(pathItems, PathItemsSeparator), nil
-	}
-
-	foundParent, err := pUc.postRepos.SelectById(parentId)
-
 	if err != nil {
-		return "", ErrNotFound
+		return nil, err
 	}
 
-	return strings.Replace(foundParent.Path, NullPathItem, pathItem, 1), nil
-}
-
-func (pUc *PostUcase) makeChunks(posts []*models.Post) [][]*models.Post {
-	postsChunk := 100
-	var chunks [][]*models.Post
-
-	for i := 0; i < len(posts); i += postsChunk {
-		bound := i + postsChunk
-
-		if bound > len(posts) {
-			bound = len(posts)
-		}
-
-		chunks = append(chunks, posts[i:bound])
-	}
-
-	return chunks
+	return posts, nil
 }
 
 func (pUc *PostUcase) GetById(id int) (*models.Post, error) {
