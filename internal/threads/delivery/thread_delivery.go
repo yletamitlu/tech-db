@@ -208,10 +208,6 @@ func (td *ThreadDelivery) voteThreadsHandler() fasthttp.RequestHandler {
 			return
 		}
 
-		if vote.Voice == -1 && changed.Votes == 2 {
-			changed.Votes = 1
-		}
-
 		SendResponse(ctx, 200, changed)
 		return
 	}

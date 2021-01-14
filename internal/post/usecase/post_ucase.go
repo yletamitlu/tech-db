@@ -78,8 +78,6 @@ func (pUc *PostUcase) Create(posts []*models.Post, slugOrId string) ([]*models.P
 		return nil, nil
 	}
 
-	err = nil
-
 	createdAt := time.Now().Format(time.RFC3339)
 
 	for _, pst := range posts {
@@ -97,7 +95,7 @@ func (pUc *PostUcase) Create(posts []*models.Post, slugOrId string) ([]*models.P
 		pst.ForumSlug = foundThr.ForumSlug
 		pst.Thread = foundThr.Id
 
-		if pst.Parent > 0 {
+		if pst.Parent != 0 {
 			foundParent, err := pUc.postRepos.SelectById(pst.Parent)
 
 			if (foundParent != nil && foundParent.Thread != pst.Thread) || err != nil {
@@ -106,7 +104,7 @@ func (pUc *PostUcase) Create(posts []*models.Post, slugOrId string) ([]*models.P
 		}
 	}
 
-	err = pUc.postRepos.InsertManyInto(posts)
+	resultPosts, err := pUc.postRepos.InsertManyInto(posts)
 
 	if err != nil {
 		return nil, err
@@ -118,7 +116,7 @@ func (pUc *PostUcase) Create(posts []*models.Post, slugOrId string) ([]*models.P
 		return nil, err
 	}
 
-	return posts, nil
+	return resultPosts, nil
 }
 
 func (pUc *PostUcase) GetById(id int) (*models.Post, error) {

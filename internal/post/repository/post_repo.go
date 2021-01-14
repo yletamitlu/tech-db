@@ -12,13 +12,13 @@ import (
 )
 
 type PostPgRepos struct {
-	conn *sqlx.DB
+	conn             *sqlx.DB
 	postIdsGenerator *Generator
 }
 
 func NewPostRepository(conn *sqlx.DB) post.PostRepository {
 	return &PostPgRepos{
-		conn: conn,
+		conn:             conn,
 		postIdsGenerator: NewGenerator(),
 	}
 }
@@ -62,9 +62,21 @@ func (pr *PostPgRepos) InsertInto(post *models.Post) (*models.Post, error) {
 	return post, nil
 }
 
-func (pr *PostPgRepos) InsertManyInto(posts []*models.Post) error {
+func (pr *PostPgRepos) getPostsByWhereIDsIn(ids []int) ([]*models.Post, error) {
+	posts := make([]*models.Post, 0)
+	query, args, err := sqlx.In("SELECT * FROM posts WHERE id IN (?) ORDER BY id", ids)
+	if err != nil {
+		return nil, err
+	}
+	query = pr.conn.Rebind(query)
+	err = pr.conn.Select(&posts, query, args...)
+	return posts, err
+}
+
+func (pr *PostPgRepos) InsertManyInto(posts []*models.Post) ([]*models.Post, error) {
 	var queryStringAdditional string
 	var args []interface{}
+	resultPosts := make([]*models.Post, 0, len(posts))
 
 	numb := 1
 
@@ -80,7 +92,7 @@ func (pr *PostPgRepos) InsertManyInto(posts []*models.Post) error {
 			path, err := pr.createPath(pst.Id, pst.Parent)
 
 			if err != nil {
-				return err
+				return nil, err
 			}
 
 			pst.Path = path
@@ -104,11 +116,20 @@ func (pr *PostPgRepos) InsertManyInto(posts []*models.Post) error {
 		_, err := pr.conn.Exec(queryStringMain, args...)
 
 		if err != nil {
-			return err
+			return nil, err
 		}
+
+		createdPosts, err := pr.getPostsByWhereIDsIn(ids)
+
+		if err != nil {
+			return nil, err
+		}
+
+		resultPosts = append(resultPosts, createdPosts...)
+
 	}
 
-	return nil
+	return resultPosts, nil
 }
 
 func (pr *PostPgRepos) makeChunks(posts []*models.Post) [][]*models.Post {
@@ -156,7 +177,7 @@ func (pr *PostPgRepos) extractParentPath(path string) string {
 
 	pathItems := []string{parentPathItem}
 
-	for i := 0; i < MaxNesting - 1; i++ {
+	for i := 0; i < MaxNesting-1; i++ {
 		pathItems = append(pathItems, NullPathItem)
 	}
 
