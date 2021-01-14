@@ -46,7 +46,7 @@ func AccessLog(next fasthttp.RequestHandler) fasthttp.RequestHandler {
 		fmt.Println()
 		logrus.Info(ctx.RemoteAddr(), " ",
 			string(ctx.Method()), " ",
-			string(ctx.Request.URI().Path()),
+			string(ctx.Request.URI().FullURI()),
 			" Work time: ", time.Now().Sub(startTime))
 	}
 }

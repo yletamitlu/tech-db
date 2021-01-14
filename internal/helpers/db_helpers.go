@@ -11,6 +11,8 @@ const (
 	NullPathItem       = "00000000"
 	MaxNesting         = 5
 	PathItemsSeparator = "."
+
+	DeadlockErrorCode = "40P01"
 )
 
 func PgxErrToCustom(err error) error {

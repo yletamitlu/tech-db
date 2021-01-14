@@ -32,26 +32,28 @@ func NewThreadUcase(
 }
 
 func (tUc *ThreadUcase) Create(thread *models.Thread) (*models.Thread, error) {
-	found, _ := tUc.GetBySlug(thread.Slug)
-
-	if found != nil {
-		return found, ErrAlreadyExists
-	}
-
 	foundAuthor, _ := tUc.userUcase.GetByNickname(thread.AuthorNickname)
 
 	if foundAuthor == nil {
 		return nil, ErrNotFound
 	}
 
-	foundForum, _ := tUc.forumUcase.GetBySlug(thread.ForumSlug)
+	found, _ := tUc.GetBySlug(thread.Slug)
 
-	if foundForum != nil && thread.ForumSlug != foundForum.Slug {
-		thread.ForumSlug = foundForum.Slug
+	if found != nil {
+		return found, ErrAlreadyExists
 	}
 
-	if foundForum == nil {
-		return nil, ErrNotFound
+	if thread.Slug != "" {
+		forumSlug, exists := tUc.forumUcase.Exists(thread.ForumSlug)
+
+		if exists && thread.ForumSlug != forumSlug {
+			thread.ForumSlug = forumSlug
+		}
+
+		if !exists {
+			return nil, ErrNotFound
+		}
 	}
 
 	if err := tUc.threadRepos.InsertInto(thread); err != nil {
@@ -140,10 +142,9 @@ func (tUc *ThreadUcase) GetById(id int) (*models.Thread, error) {
 }
 
 func (tUc *ThreadUcase) GetByForumSlug(forumSlug string, limit int, desc bool, since string) ([]*models.Thread, error) {
-	foundForum, err := tUc.forumUcase.GetBySlug(forumSlug)
-
-	if err != nil {
-		return nil, err
+	_, forumExists := tUc.forumUcase.Exists(forumSlug)
+	if !forumExists {
+		return nil, ErrNotFound
 	}
 
 	found, err := tUc.threadRepos.SelectByForumSlug(forumSlug, limit, desc, since)
@@ -152,7 +153,7 @@ func (tUc *ThreadUcase) GetByForumSlug(forumSlug string, limit int, desc bool, s
 		return nil, err
 	}
 
-	if found == nil && foundForum != nil {
+	if found == nil && forumExists {
 		found = []*models.Thread{}
 	}
 

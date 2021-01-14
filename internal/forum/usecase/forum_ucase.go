@@ -52,8 +52,7 @@ func (fUc *ForumUcase) GetBySlug(slug string) (*models.Forum, error) {
 }
 
 func (fUc *ForumUcase) GetUsers(forumSlug string, limit int, desc bool, since string) ([]*models.User, error) {
-	foundForum, _ := fUc.forumRepos.SelectBySlug(forumSlug)
-	if foundForum == nil {
+	if _, exists := fUc.Exists(forumSlug); !exists {
 		return nil, ErrNotFound
 	}
 
@@ -80,4 +79,13 @@ func (fUc *ForumUcase) UpdatePostsCount(delta int, forumSlug string) error {
 	}
 
 	return nil
+}
+
+func (fUc *ForumUcase) Exists(forumSlug string) (string, bool) {
+	slug, err := fUc.forumRepos.SelectForumSlug(forumSlug)
+	if  err != nil {
+		return "", false
+	}
+
+	return slug, true
 }

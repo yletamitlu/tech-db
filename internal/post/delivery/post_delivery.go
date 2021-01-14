@@ -25,13 +25,13 @@ func NewPostDelivery(pUc post.PostUsecase) *PostDelivery {
 }
 
 func (pd *PostDelivery) Configure(router *fasthttprouter.Router) {
-	router.POST("/api/thread/:slug/create", pd.createPostHandler())
+	router.POST("/api/thread/:slug/create", pd.createPostsHandler())
 	router.GET("/api/thread/:slug/posts", pd.getPostsHandler())
 	router.POST("/api/post/:id/details", pd.updatePost())
 	router.GET("/api/post/:id/details", pd.getPostHandler())
 }
 
-func (pd *PostDelivery) createPostHandler() fasthttp.RequestHandler {
+func (pd *PostDelivery) createPostsHandler() fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 		slugStr, _ := ctx.UserValue("slug").(string)
 
@@ -74,8 +74,7 @@ func (pd *PostDelivery) createPostHandler() fasthttp.RequestHandler {
 		}
 
 		if resultPosts == nil {
-			var posts []*models.Post
-			posts = []*models.Post{}
+			posts := &[]*models.Post{}
 			SendResponse(ctx, 201, posts)
 			return
 		}

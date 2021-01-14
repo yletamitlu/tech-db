@@ -62,7 +62,7 @@ func (pr *PostPgRepos) InsertInto(post *models.Post) (*models.Post, error) {
 	return post, nil
 }
 
-func (pr *PostPgRepos) getPostsByWhereIDsIn(ids []int) ([]*models.Post, error) {
+func (pr *PostPgRepos) getPostsWhereIDsIn(ids []int) ([]*models.Post, error) {
 	posts := make([]*models.Post, 0)
 	query, args, err := sqlx.In("SELECT * FROM posts WHERE id IN (?) ORDER BY id", ids)
 	if err != nil {
@@ -113,13 +113,21 @@ func (pr *PostPgRepos) InsertManyInto(posts []*models.Post) ([]*models.Post, err
 			numb = numb + 8
 		}
 
-		_, err := pr.conn.Exec(queryStringMain, args...)
+		var err error
+		inserted := false
+		for !inserted {
+			_, err = pr.conn.Exec(queryStringMain, args...)
+
+			if err == nil || !strings.Contains(err.Error(), DeadlockErrorCode) {
+				inserted = true
+			}
+		}
 
 		if err != nil {
 			return nil, err
 		}
 
-		createdPosts, err := pr.getPostsByWhereIDsIn(ids)
+		createdPosts, err := pr.getPostsWhereIDsIn(ids)
 
 		if err != nil {
 			return nil, err

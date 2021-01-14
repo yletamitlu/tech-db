@@ -27,6 +27,14 @@ func (fr *ForumPgRepos) SelectBySlug(slug string) (*models.Forum, error) {
 		return nil, PgxErrToCustom(err)
 	}
 
+	//if err := fr.conn.Get(&f.Posts, `SELECT count(*) FROM posts WHERE forum_slug = $1`, f.Slug); err != nil {
+	//	return nil, err
+	//}
+	//
+	//if err := fr.UpdatePostsCount(f.Slug, f.Posts); err != nil {
+	//	return nil, err
+	//}
+
 	return f, nil
 }
 
@@ -62,12 +70,32 @@ func (fr *ForumPgRepos) SelectUsers(slug string, limit int, desc bool, since str
 }
 
 func (fr *ForumPgRepos) UpdatePostsCount(forumSlug string, postsCount int) error {
-	_, err := fr.conn.Exec(`UPDATE forums SET posts = $1 where slug = $2`,
-		postsCount, forumSlug)
+	tr, err := fr.conn.Begin()
 
 	if err != nil {
 		return err
 	}
 
+	_, err = tr.Exec(`UPDATE forums SET posts = $1 where slug = $2`,
+		postsCount, forumSlug)
+
+	if err != nil {
+		_ = tr.Rollback()
+		return err
+	}
+
+	if err := tr.Commit(); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (fr *ForumPgRepos) SelectForumSlug(slug string) (string, error) {
+	var selectedSlug string
+	if err := fr.conn.Get(&selectedSlug, `SELECT slug from forums where slug = $1`, slug); err != nil {
+		return "", PgxErrToCustom(err)
+	}
+
+	return selectedSlug, nil
 }
