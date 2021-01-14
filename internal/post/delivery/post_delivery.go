@@ -65,18 +65,18 @@ func (pd *PostDelivery) createPostHandler() fasthttp.RequestHandler {
 			return
 		}
 
-		if resultPosts == nil {
-			var posts []*models.Post
-			posts = []*models.Post{}
-			SendResponse(ctx, 201, posts)
-			return
-		}
-
 		if err != nil {
 			logrus.Info(err)
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
+			return
+		}
+
+		if resultPosts == nil {
+			var posts []*models.Post
+			posts = []*models.Post{}
+			SendResponse(ctx, 201, posts)
 			return
 		}
 

@@ -30,6 +30,8 @@ func (vUc *VoteUcase) Create(vote *models.Vote) (int, error) {
 	found, _ := vUc.voteRepos.SelectByThreadAndUser(vote)
 
 	if found != nil {
+		newVoice := vote.Voice - found.Voice
+
 		if found.Voice == vote.Voice {
 			return 0, nil
 		}
@@ -38,20 +40,12 @@ func (vUc *VoteUcase) Create(vote *models.Vote) (int, error) {
 			return 0, err
 		}
 
-		if vote.Voice == 1 {
-			return 1, nil
-		}
-
-		return -1, nil
+		return newVoice, nil
 	}
 
 	if err := vUc.voteRepos.InsertInto(vote); err != nil {
 		return 0, err
 	}
 
-	if vote.Voice == 1 {
-		return 1, nil
-	}
-
-	return -1, nil
+	return vote.Voice, nil
 }
