@@ -21,13 +21,13 @@ DROP TABLE IF EXISTS threads CASCADE;
 CREATE TABLE IF NOT EXISTS threads
 (
     id              serial  NOT NULL PRIMARY KEY,
-    slug            citext  not null default '',
+    slug            citext  NOT NULL DEFAULT '',
     author_nickname citext REFERENCES users (nickname) ON DELETE CASCADE,
     created_at      timestamptz      DEFAULT now(),
     forum_slug      citext REFERENCES forums (slug) ON DELETE CASCADE,
     message         text,
     title           text    NOT NULL,
-    votes           integer not null default 0
+    votes           integer NOT NULL DEFAULT 0
 );
 
 DROP TABLE IF EXISTS votes CASCADE;
@@ -48,6 +48,60 @@ CREATE TABLE IF NOT EXISTS posts
     author_nickname citext REFERENCES users (nickname) ON DELETE CASCADE,
     forum_slug      citext REFERENCES forums (slug) ON DELETE CASCADE,
     thread_id       integer NOT NULL DEFAULT 0 REFERENCES threads (id) ON DELETE CASCADE,
-    parent          integer REFERENCES posts (id) ON DELETE CASCADE,
-    is_edited       boolean NOT NULL DEFAULT false
-)
+    parent          integer NOT NULL DEFAULT 0,
+    is_edited       boolean NOT NULL DEFAULT false,
+    path            text    NOT NULL DEFAULT ''
+);
+
+DROP TABLE IF EXISTS user_forum CASCADE;
+CREATE TABLE user_forum
+(
+    user_nickname CITEXT NOT NULL,
+    forum_slug    CITEXT NOT NULL,
+    PRIMARY KEY (forum_slug, user_nickname)
+);
+
+drop function if exists addUserForum;
+create function addUserForum() returns trigger as
+$$
+begin
+    insert into user_forum (forum_slug, user_nickname)
+    values (new.forum_slug, new.author_nickname)
+    on conflict do nothing;
+    return new;
+end;
+$$ language plpgsql;
+
+drop function if exists threadsCounter;
+create or replace function threadsCounter()
+    returns trigger as
+$$
+begin
+    update forums
+    set threads = threads + 1
+    where slug = new.forum_slug;
+
+    return null;
+end;
+$$ language plpgsql;
+
+drop trigger if exists threadsIncrementer on threads;
+create trigger threadsIncrementer
+    after insert
+    on threads
+    for each row
+execute procedure threadsCounter();
+
+drop trigger if exists threadsActivity on threads;
+create trigger threadsActivity
+    after insert
+    on threads
+    for each row
+execute procedure addUserForum();
+
+drop trigger if exists postsActivity on posts;
+create trigger postsActivity
+    after insert
+    on posts
+    for each row
+execute procedure addUserForum();

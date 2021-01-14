@@ -9,6 +9,6 @@ type ThreadRepository interface {
 	SelectById(id int) (*models.Thread, error)
 	SelectByForumSlug(slug string, limit int, desc bool, since string) ([]*models.Thread, error)
 	InsertInto(thread *models.Thread) error
-	Update(updatedThread *models.Thread)
+	Update(updatedThread *models.Thread) error
 	UpdateVotes(updatedThread *models.Thread)
 }

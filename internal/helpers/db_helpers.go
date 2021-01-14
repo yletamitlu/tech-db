@@ -6,6 +6,13 @@ import (
 	"github.com/yletamitlu/tech-db/internal/consts"
 )
 
+const (
+	PathItemLen        = 8
+	NullPathItem       = "00000000"
+	MaxNesting         = 5
+	PathItemsSeparator = "."
+)
+
 func PgxErrToCustom(err error) error {
 	switch err {
 	case pgx.ErrNoRows:

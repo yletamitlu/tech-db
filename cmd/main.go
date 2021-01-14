@@ -24,6 +24,9 @@ import (
 
 	voteR "github.com/yletamitlu/tech-db/internal/vote/repository"
 	voteU "github.com/yletamitlu/tech-db/internal/vote/usecase"
+
+	additionsD "github.com/yletamitlu/tech-db/internal/additions/delivery"
+	additionsR "github.com/yletamitlu/tech-db/internal/additions/repository"
 	"log"
 )
 
@@ -74,20 +77,24 @@ func main() {
 	forumDelivery := forumD.NewForumDelivery(forumUcase)
 
 	voteRepos := voteR.NewVoteRepository(conn)
-	voteUcase := voteU.NewVoteUcase(voteRepos)
+	voteUcase := voteU.NewVoteUcase(voteRepos, userRepos)
 
 	threadRepos := threadR.NewThreadRepository(conn)
 	threadUcase := threadU.NewThreadUcase(threadRepos, userUcase, forumUcase, voteUcase)
 	threadDelivery := threadD.NewThreadDelivery(threadUcase)
 
 	postRepos := postR.NewPostRepository(conn)
-	postUcase := postU.NewPostUcase(postRepos, userUcase, threadUcase)
+	postUcase := postU.NewPostUcase(postRepos, userUcase, threadUcase, forumUcase)
 	postDelivery := postD.NewPostDelivery(postUcase)
+
+	additionsRepos := additionsR.NewAdditionRepository(conn)
+	additionsDelivery := additionsD.NewAdditionsDelivery(additionsRepos)
 
 	userDelivery.Configure(router)
 	threadDelivery.Configure(router)
 	forumDelivery.Configure(router)
 	postDelivery.Configure(router)
+	additionsDelivery.Configure(router)
 
 	crutchRouter := NewCrutchRouter(router, forumDelivery)
 
