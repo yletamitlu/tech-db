@@ -20,19 +20,19 @@ func NewForumUcase(repos forum.ForumRepository, uUcase user.UserUsecase) forum.F
 }
 
 func (fUc *ForumUcase) Create(forum *models.Forum) (*models.Forum, error) {
-	found, _ := fUc.forumRepos.SelectBySlug(forum.Slug)
+	foundNickname, _ := fUc.userUcase.GetUserNickname(forum.AuthorNickname)
+
+	if foundNickname == "" {
+		return nil, ErrNotFound
+	}
+
+	found, _ := fUc.forumRepos.SelectBySlug(forum.Slug, false)
 
 	if found != nil {
 		return found, ErrAlreadyExists
 	}
 
-	foundUser, _ := fUc.userUcase.GetByNickname(forum.AuthorNickname)
-
-	if foundUser == nil {
-		return nil, ErrNotFound
-	}
-
-	forum.AuthorNickname = foundUser.Nickname
+	forum.AuthorNickname = foundNickname
 
 	if err := fUc.forumRepos.InsertInto(forum); err != nil {
 		return nil, err
@@ -41,8 +41,8 @@ func (fUc *ForumUcase) Create(forum *models.Forum) (*models.Forum, error) {
 	return forum, nil
 }
 
-func (fUc *ForumUcase) GetBySlug(slug string) (*models.Forum, error) {
-	found, err := fUc.forumRepos.SelectBySlug(slug)
+func (fUc *ForumUcase) GetBySlug(slug string, withPosts bool) (*models.Forum, error) {
+	found, err := fUc.forumRepos.SelectBySlug(slug, withPosts)
 
 	if err != nil {
 		return nil, err
@@ -65,14 +65,8 @@ func (fUc *ForumUcase) GetUsers(forumSlug string, limit int, desc bool, since st
 	return found, nil
 }
 
-func (fUc *ForumUcase) UpdatePostsCount(delta int, forumSlug string) error {
-	foundForum, _ := fUc.forumRepos.SelectBySlug(forumSlug)
-
-	if foundForum == nil {
-		return ErrNotFound
-	}
-
-	err := fUc.forumRepos.UpdatePostsCount(forumSlug, foundForum.Posts + delta)
+func (fUc *ForumUcase) UpdatePostsCount(forumSlug string, count int) error {
+	err := fUc.forumRepos.UpdatePostsCount(forumSlug, count)
 
 	if err != nil {
 		return err

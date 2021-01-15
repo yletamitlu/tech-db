@@ -1,6 +1,9 @@
+CREATE EXTENSION IF NOT EXISTS citext;
+
 DROP TABLE IF EXISTS users CASCADE;
 CREATE TABLE IF NOT EXISTS users
 (
+    id       serial,
     nickname citext NOT NULL PRIMARY KEY,
     fullname text   NOT NULL,
     email    citext NOT NULL UNIQUE,
@@ -10,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users
 DROP TABLE IF EXISTS forums CASCADE;
 CREATE TABLE IF NOT EXISTS forums
 (
-    author_nickname citext NOT NULL REFERENCES users (nickname) ON DELETE CASCADE,
+    author_nickname citext NOT NULL,
     title           text   NOT NULL,
     slug            citext NOT NULL PRIMARY KEY,
     threads         integer DEFAULT 0,
@@ -22,9 +25,9 @@ CREATE TABLE IF NOT EXISTS threads
 (
     id              serial  NOT NULL PRIMARY KEY,
     slug            citext  NOT NULL DEFAULT '',
-    author_nickname citext REFERENCES users (nickname) ON DELETE CASCADE,
+    author_nickname citext,
     created_at      timestamptz      DEFAULT now(),
-    forum_slug      citext REFERENCES forums (slug) ON DELETE CASCADE,
+    forum_slug      citext,
     message         text,
     title           text    NOT NULL,
     votes           integer NOT NULL DEFAULT 0
@@ -33,9 +36,9 @@ CREATE TABLE IF NOT EXISTS threads
 DROP TABLE IF EXISTS votes CASCADE;
 CREATE TABLE IF NOT EXISTS votes
 (
-    user_nickname citext REFERENCES users (nickname) ON DELETE CASCADE,
+    user_nickname citext,
     voice         integer NOT NULL,
-    thread_id     integer REFERENCES threads (id) ON DELETE CASCADE,
+    thread_id     integer,
     PRIMARY KEY (user_nickname, thread_id)
 );
 
@@ -45,9 +48,9 @@ CREATE TABLE IF NOT EXISTS posts
     id              serial  NOT NULL PRIMARY KEY,
     created_at      timestamptz      DEFAULT now(),
     message         text,
-    author_nickname citext REFERENCES users (nickname) ON DELETE CASCADE,
-    forum_slug      citext REFERENCES forums (slug) ON DELETE CASCADE,
-    thread_id       integer NOT NULL DEFAULT 0 REFERENCES threads (id) ON DELETE CASCADE,
+    author_nickname citext,
+    forum_slug      citext,
+    thread_id       integer NOT NULL DEFAULT 0,
     parent          integer NOT NULL DEFAULT 0,
     is_edited       boolean NOT NULL DEFAULT false,
     path            text    NOT NULL DEFAULT ''

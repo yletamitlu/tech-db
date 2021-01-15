@@ -73,7 +73,7 @@ func (fd *ForumDelivery) getForumDetailsHandler() fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 		slug, _ := ctx.UserValue("slug").(string)
 
-		found, err := fd.forumUcase.GetBySlug(slug)
+		found, err := fd.forumUcase.GetBySlug(slug, true)
 
 		if err == ErrNotFound {
 			logrus.Info(err)

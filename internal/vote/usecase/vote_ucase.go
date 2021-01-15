@@ -21,9 +21,9 @@ func NewVoteUcase(repos vote.VoteRepository, usRepo user.UserRepository) vote.Vo
 }
 
 func (vUc *VoteUcase) Create(vote *models.Vote) (int, error) {
-	foundUser, _ := vUc.userRepo.SelectByNickname(vote.AuthorNickname)
+	foundNickname, _ := vUc.userRepo.SelectUserNickname(vote.AuthorNickname)
 
-	if foundUser == nil {
+	if foundNickname == "" {
 		return 0, consts.ErrNotFound
 	}
 

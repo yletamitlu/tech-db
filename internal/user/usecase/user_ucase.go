@@ -40,6 +40,16 @@ func (uUc *UserUcase) GetByNickname(nickname string) (*models.User, error) {
 	return u, nil
 }
 
+func (uUc *UserUcase) GetUserNickname(nickname string) (string, error) {
+	nickname, err := uUc.userRepos.SelectUserNickname(nickname)
+
+	if err != nil {
+		return "", err
+	}
+
+	return nickname, nil
+}
+
 func (uUc *UserUcase) Update(updatedUser *models.User) (*models.User, error) {
 	u, _ := uUc.userRepos.SelectByEmail(updatedUser.Email)
 

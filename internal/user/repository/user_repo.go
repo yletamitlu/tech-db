@@ -8,12 +8,14 @@ import (
 )
 
 type UserPgRepos struct {
-	conn *sqlx.DB
+	conn      *sqlx.DB
+	userCache *UserCache
 }
 
 func NewUserRepository(conn *sqlx.DB) user.UserRepository {
 	return &UserPgRepos{
 		conn: conn,
+		userCache: NewUserCache(),
 	}
 }
 
@@ -30,15 +32,36 @@ func (ur *UserPgRepos) SelectByNicknameOrEmail(nickname string, email string) ([
 	return users, nil
 }
 
+func (ur *UserPgRepos) SelectUserNickname(nickname string) (string, error) {
+	if realNickname, err := ur.userCache.GetNickname(nickname); err == nil {
+		return realNickname, nil
+	}
+
+	user := &models.User{}
+	if err := ur.conn.Get(
+		user,
+		`SELECT id, nickname FROM users WHERE nickname = $1`,
+		nickname,
+	); err != nil {
+		return "", PgxErrToCustom(err)
+	}
+
+	ur.userCache.Set(user.Id, user.Nickname)
+
+	return user.Nickname, nil
+}
+
 func (ur *UserPgRepos) InsertInto(user *models.User) error {
-	if _, err := ur.conn.Exec(
-		`INSERT INTO users(nickname, fullname, email, about) VALUES ($1, $2, $3, $4)`,
+	if err := ur.conn.QueryRow(
+		`INSERT INTO users(nickname, fullname, email, about) VALUES ($1, $2, $3, $4) RETURNING id`,
 		user.Nickname,
 		user.FullName,
 		user.Email,
-		user.About); err != nil {
+		user.About).Scan(&user.Id); err != nil {
 		return err
 	}
+
+	ur.userCache.Set(user.Id, user.Nickname)
 
 	return nil
 }

@@ -49,7 +49,7 @@ func (pUc *PostUcase) GetPostThread(threadId int) (*models.Thread, error) {
 }
 
 func (pUc *PostUcase) GetPostForum(forumSlug string) (*models.Forum, error) {
-	foundForum, err := pUc.forumUcase.GetBySlug(forumSlug)
+	foundForum, err := pUc.forumUcase.GetBySlug(forumSlug, true)
 
 	if err != nil {
 		return nil, err
@@ -81,9 +81,9 @@ func (pUc *PostUcase) Create(posts []*models.Post, slugOrId string) ([]*models.P
 	createdAt := time.Now().Format(time.RFC3339)
 
 	for _, pst := range posts {
-		foundAuthor, err := pUc.userUcase.GetByNickname(pst.AuthorNickname)
+		foundNickname, err := pUc.userUcase.GetUserNickname(pst.AuthorNickname)
 
-		if foundAuthor == nil {
+		if foundNickname == "" {
 			return nil, ErrNotFound
 		}
 
@@ -105,12 +105,6 @@ func (pUc *PostUcase) Create(posts []*models.Post, slugOrId string) ([]*models.P
 	}
 
 	resultPosts, err := pUc.postRepos.InsertManyInto(posts)
-
-	if err != nil {
-		return nil, err
-	}
-
-	err = pUc.forumUcase.UpdatePostsCount(len(posts), foundThr.ForumSlug)
 
 	if err != nil {
 		return nil, err

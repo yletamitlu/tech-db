@@ -32,9 +32,9 @@ func NewThreadUcase(
 }
 
 func (tUc *ThreadUcase) Create(thread *models.Thread) (*models.Thread, error) {
-	foundAuthor, _ := tUc.userUcase.GetByNickname(thread.AuthorNickname)
+	foundNickname, _ := tUc.userUcase.GetUserNickname(thread.AuthorNickname)
 
-	if foundAuthor == nil {
+	if foundNickname == "" {
 		return nil, ErrNotFound
 	}
 
