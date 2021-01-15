@@ -55,7 +55,7 @@ func (cr *CrutchRouter) GetHandler() fasthttp.RequestHandler {
 }
 
 func main() {
-	conn, err := sqlx.Connect("pgx", "postgres://techdbuser@localhost:5432/techdb")
+	conn, err := sqlx.Connect("pgx", "postgres://techdbuser:techdb@localhost:5432/techdb")
 	if err != nil {
 		log.Fatal(err)
 	}
