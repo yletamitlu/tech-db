@@ -314,12 +314,13 @@ func (pr *PostPgRepos) SelectPostsParentTree(id int, limit int, desc bool, since
 
 		parentPathItem := strings.Split(parent.Path, PathItemsSeparator)[0]
 
-		if err := pr.conn.Select(&children, "SELECT * FROM posts where substring(path, 1, 8) = $1 order by path",
+		if err := pr.conn.Select(&children, "SELECT * FROM posts where substring(path, 1, 8) = $1 AND parent <> 0 order by path",
 			parentPathItem);
 			err != nil {
 			return nil, PgxErrToCustom(err)
 		}
 
+		posts = append(posts, parent)
 		posts = append(posts, children...)
 	}
 
