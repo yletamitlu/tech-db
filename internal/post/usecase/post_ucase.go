@@ -61,8 +61,7 @@ func (pUc *PostUcase) GetPostForum(forumSlug string) (*models.Forum, error) {
 func (pUc *PostUcase) Create(posts []*models.Post, slugOrId string) ([]*models.Post, error) {
 	foundThr := &models.Thread{}
 
-	id, err := strconv.Atoi(slugOrId)
-	if err == nil {
+	if id, err := strconv.Atoi(slugOrId); err == nil {
 		foundThr, _ = pUc.threadUcase.GetById(id)
 		if foundThr == nil {
 			return nil, ErrNotFound
@@ -107,6 +106,10 @@ func (pUc *PostUcase) Create(posts []*models.Post, slugOrId string) ([]*models.P
 	resultPosts, err := pUc.postRepos.InsertManyInto(posts)
 
 	if err != nil {
+		return nil, err
+	}
+
+	if err = pUc.forumUcase.UpdatePostsCount(foundThr.ForumSlug, len(resultPosts)); err != nil {
 		return nil, err
 	}
 

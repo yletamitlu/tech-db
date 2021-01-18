@@ -3,7 +3,7 @@ package delivery
 import (
 	"encoding/json"
 	"github.com/buaazp/fasthttprouter"
-	"github.com/sirupsen/logrus"
+	//"github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
 	. "github.com/yletamitlu/tech-db/internal/consts"
 	. "github.com/yletamitlu/tech-db/internal/helpers"
@@ -35,7 +35,7 @@ func (ud *UserDelivery) getUserProfile() fasthttp.RequestHandler {
 		u, err := ud.userUcase.GetByNickname(nickname)
 
 		if err != nil && err == ErrNotFound {
-			logrus.Info(err)
+			//logrus.info(err)
 			SendResponse(ctx, 404, &ErrorResponse{
 				Message: err.Error(),
 			})
@@ -43,7 +43,7 @@ func (ud *UserDelivery) getUserProfile() fasthttp.RequestHandler {
 		}
 
 		if err != nil {
-			logrus.Info(err)
+			//logrus.info(err)
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
@@ -64,7 +64,7 @@ func (ud *UserDelivery) createUserHandler() fasthttp.RequestHandler {
 
 		body := ctx.Request.Body()
 		if err := json.Unmarshal(body, &u); err != nil {
-			logrus.Info(err)
+			//logrus.info(err)
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
@@ -74,13 +74,13 @@ func (ud *UserDelivery) createUserHandler() fasthttp.RequestHandler {
 		err, found := ud.userUcase.Create(u)
 
 		if found != nil {
-			logrus.Info(err)
+			//logrus.info(err)
 			SendResponse(ctx, 409, found)
 			return
 		}
 
 		if err != nil {
-			logrus.Info(err)
+			//logrus.info(err)
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
@@ -102,7 +102,7 @@ func (ud *UserDelivery) updateProfile() fasthttp.RequestHandler {
 
 		body := ctx.Request.Body()
 		if err := json.Unmarshal(body, &updatedUser); err != nil {
-			logrus.Info(err)
+			//logrus.info(err)
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
@@ -112,7 +112,7 @@ func (ud *UserDelivery) updateProfile() fasthttp.RequestHandler {
 		resU, err := ud.userUcase.Update(updatedUser)
 
 		if err != nil && err == ErrNotFound {
-			logrus.Info(err)
+			//logrus.info(err)
 			SendResponse(ctx, 404, &ErrorResponse{
 				Message: err.Error(),
 			})
@@ -120,7 +120,7 @@ func (ud *UserDelivery) updateProfile() fasthttp.RequestHandler {
 		}
 
 		if err != nil && err == ErrConflict {
-			logrus.Info(err)
+			//logrus.info(err)
 			SendResponse(ctx, 409, &ErrorResponse{
 				Message: err.Error(),
 			})
@@ -128,7 +128,7 @@ func (ud *UserDelivery) updateProfile() fasthttp.RequestHandler {
 		}
 
 		if err != nil {
-			logrus.Info(err)
+			//logrus.info(err)
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})

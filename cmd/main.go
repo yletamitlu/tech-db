@@ -102,5 +102,5 @@ func main() {
 	crutchRouter := NewCrutchRouter(router, forumDelivery)
 
 	fmt.Printf("Server started...")
-	log.Fatal(fasthttp.ListenAndServe(":5000", Use(crutchRouter.GetHandler(), PanicRecovering, SetHeaders, AccessLog)))
+	log.Fatal(fasthttp.ListenAndServe(":5000", Use(crutchRouter.GetHandler(), PanicRecovering, SetHeaders)))
 }

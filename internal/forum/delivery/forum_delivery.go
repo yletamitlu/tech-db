@@ -3,7 +3,7 @@ package delivery
 import (
 	"encoding/json"
 	"github.com/buaazp/fasthttprouter"
-	"github.com/sirupsen/logrus"
+	//"github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
 	. "github.com/yletamitlu/tech-db/internal/consts"
 	"github.com/yletamitlu/tech-db/internal/forum"
@@ -34,7 +34,7 @@ func (fd *ForumDelivery) CreateForumHandler(ctx *fasthttp.RequestCtx) {
 
 	body := ctx.Request.Body()
 	if err := json.Unmarshal(body, &f); err != nil {
-		logrus.Info(err)
+		//logrus.info(err)
 		SendResponse(ctx, 500, &ErrorResponse{
 			Message: ErrInternal.Error(),
 		})
@@ -44,13 +44,13 @@ func (fd *ForumDelivery) CreateForumHandler(ctx *fasthttp.RequestCtx) {
 	f, err := fd.forumUcase.Create(f)
 
 	if err == ErrAlreadyExists {
-		logrus.Info(err)
+		//logrus.info(err)
 		SendResponse(ctx, 409, f)
 		return
 	}
 
 	if err == ErrNotFound {
-		logrus.Info(err)
+		//logrus.info(err)
 		SendResponse(ctx, 404, &ErrorResponse{
 			Message: ErrNotFound.Error(),
 		})
@@ -58,7 +58,7 @@ func (fd *ForumDelivery) CreateForumHandler(ctx *fasthttp.RequestCtx) {
 	}
 
 	if err != nil {
-		logrus.Info(err)
+		//logrus.info(err)
 		SendResponse(ctx, 500, &ErrorResponse{
 			Message: ErrInternal.Error(),
 		})
@@ -76,7 +76,7 @@ func (fd *ForumDelivery) getForumDetailsHandler() fasthttp.RequestHandler {
 		found, err := fd.forumUcase.GetBySlug(slug, true)
 
 		if err == ErrNotFound {
-			logrus.Info(err)
+			//logrus.info(err)
 			SendResponse(ctx, 404, &ErrorResponse{
 				Message: ErrNotFound.Error(),
 			})
@@ -84,7 +84,7 @@ func (fd *ForumDelivery) getForumDetailsHandler() fasthttp.RequestHandler {
 		}
 
 		if err != nil {
-			logrus.Info(err)
+			//logrus.info(err)
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
@@ -110,7 +110,7 @@ func (fd *ForumDelivery) getForumUsersHandler() fasthttp.RequestHandler {
 		found, err := fd.forumUcase.GetUsers(slug, limit, desc, since)
 
 		if found == nil {
-			logrus.Info(err)
+			//logrus.info(err)
 			SendResponse(ctx, 404, &ErrorResponse{
 				Message: ErrNotFound.Error(),
 			})
@@ -118,7 +118,7 @@ func (fd *ForumDelivery) getForumUsersHandler() fasthttp.RequestHandler {
 		}
 
 		if err != nil {
-			logrus.Info(err)
+			//logrus.info(err)
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
