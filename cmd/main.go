@@ -60,8 +60,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	conn.SetMaxOpenConns(8)
-	conn.SetMaxIdleConns(8)
+	conn.SetMaxOpenConns(25)
+	conn.SetMaxIdleConns(25)
 
 	if err := conn.Ping(); err != nil {
 		log.Fatal(err)
