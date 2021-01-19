@@ -204,6 +204,16 @@ func (pr *PostPgRepos) Update(updatedPost *models.Post) error {
 	return nil
 }
 
+func (pr *PostPgRepos) SelectPostFields(fields string, filter string, params ...interface{}) (*models.Post, error) {
+	p := &models.Post{}
+
+	if err := pr.conn.Get(p, "SELECT " + fields + " FROM posts WHERE " + filter, params...); err != nil {
+		return nil, err
+	}
+
+	return p, nil
+}
+
 func (pr *PostPgRepos) SelectPostsFlat(id int, limit int, desc bool, since string) ([]*models.Post, error) {
 	var posts []*models.Post
 
@@ -232,7 +242,7 @@ func (pr *PostPgRepos) SelectPostsTree(id int, limit int, desc bool, since strin
 
 	if since != "" {
 		postId, _ := strconv.Atoi(since)
-		foundPost, err := pr.SelectById(postId)
+		foundPost, err := pr.SelectPostFields("path", "id=$1", postId)
 
 		if err != nil {
 			return nil, err
@@ -266,8 +276,6 @@ func (pr *PostPgRepos) SelectPostsTree(id int, limit int, desc bool, since strin
 }
 
 func (pr *PostPgRepos) SelectPostsParentTree(id int, limit int, desc bool, since string) ([]*models.Post, error) {
-	var parentPosts []*models.Post
-
 	queryString := "SELECT * from posts where thread_id = $1 and parent = 0"
 
 	var values []interface{}
@@ -277,7 +285,7 @@ func (pr *PostPgRepos) SelectPostsParentTree(id int, limit int, desc bool, since
 
 	if since != "" {
 		postId, _ := strconv.Atoi(since)
-		foundPost, err := pr.SelectById(postId)
+		foundPost, err := pr.SelectPostFields("path", "id=$1", postId)
 
 		if err != nil {
 			return nil, err
@@ -303,6 +311,8 @@ func (pr *PostPgRepos) SelectPostsParentTree(id int, limit int, desc bool, since
 	values = append(values, limit)
 
 	q := queryString
+
+	var parentPosts []*models.Post
 	if err := pr.conn.Select(&parentPosts, q, values...); err != nil {
 		return nil, PgxErrToCustom(err)
 	}
@@ -314,7 +324,7 @@ func (pr *PostPgRepos) SelectPostsParentTree(id int, limit int, desc bool, since
 
 		parentPathItem := strings.Split(parent.Path, PathItemsSeparator)[0]
 
-		if err := pr.conn.Select(&children, "SELECT * FROM posts where substring(path, 1, 8) = $1 AND parent <> 0 order by path",
+		if err := pr.conn.Select(&children, "SELECT * FROM posts where substring(path, 1, 7) = $1 AND parent <> 0 order by path",
 			parentPathItem);
 			err != nil {
 			return nil, PgxErrToCustom(err)

@@ -3,7 +3,7 @@ package delivery
 import (
 	"encoding/json"
 	"github.com/buaazp/fasthttprouter"
-	//"github.com/sirupsen/logrus"
+
 	"github.com/valyala/fasthttp"
 	. "github.com/yletamitlu/tech-db/internal/consts"
 	. "github.com/yletamitlu/tech-db/internal/helpers"
@@ -40,9 +40,9 @@ func (td *ThreadDelivery) createThreadHandler() fasthttp.RequestHandler {
 			ForumSlug: slug,
 		}
 
-		body := ctx.Request.Body()
+		body := ctx.PostBody()
 		if err := json.Unmarshal(body, &thr); err != nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
@@ -52,13 +52,13 @@ func (td *ThreadDelivery) createThreadHandler() fasthttp.RequestHandler {
 		found, err := td.threadUcase.Create(thr)
 
 		if found != nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 409, found)
 			return
 		}
 
 		if err == ErrNotFound {
-			//logrus.info(err)
+
 			SendResponse(ctx, 404, &ErrorResponse{
 				Message: ErrNotFound.Error(),
 			})
@@ -66,7 +66,7 @@ func (td *ThreadDelivery) createThreadHandler() fasthttp.RequestHandler {
 		}
 
 		if err != nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
@@ -81,9 +81,9 @@ func (td *ThreadDelivery) createThreadHandler() fasthttp.RequestHandler {
 func (td *ThreadDelivery) getThreadsHandler() fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 		slug, _ := ctx.UserValue("slug").(string)
-		limitStr := string(ctx.QueryArgs().Peek("limit"))
-		descStr := string(ctx.QueryArgs().Peek("desc"))
-		since := string(ctx.QueryArgs().Peek("since"))
+		limitStr := string(ctx.FormValue("limit"))
+		descStr := string(ctx.FormValue("desc"))
+		since := string(ctx.FormValue("since"))
 
 		limit, _ := strconv.Atoi(limitStr)
 		desc, _ := strconv.ParseBool(descStr)
@@ -91,7 +91,7 @@ func (td *ThreadDelivery) getThreadsHandler() fasthttp.RequestHandler {
 		found, err := td.threadUcase.GetByForumSlug(slug, limit, desc, since)
 
 		if found == nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 404, &ErrorResponse{
 				Message: ErrNotFound.Error(),
 			})
@@ -99,7 +99,7 @@ func (td *ThreadDelivery) getThreadsHandler() fasthttp.RequestHandler {
 		}
 
 		if err != nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
@@ -118,7 +118,7 @@ func (td *ThreadDelivery) getThreadDetailsHandler() fasthttp.RequestHandler {
 		foundThr, err := td.threadUcase.GetThread(slugOrId)
 
 		if foundThr == nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 404, &ErrorResponse{
 				Message: ErrNotFound.Error(),
 			})
@@ -126,7 +126,7 @@ func (td *ThreadDelivery) getThreadDetailsHandler() fasthttp.RequestHandler {
 		}
 
 		if err != nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
@@ -144,9 +144,9 @@ func (td *ThreadDelivery) updateThreadsHandler() fasthttp.RequestHandler {
 
 		thr := &models.Thread{}
 
-		body := ctx.Request.Body()
+		body := ctx.PostBody()
 		if err := json.Unmarshal(body, &thr); err != nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
@@ -163,7 +163,7 @@ func (td *ThreadDelivery) updateThreadsHandler() fasthttp.RequestHandler {
 		}
 
 		if err != nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
@@ -181,9 +181,9 @@ func (td *ThreadDelivery) voteThreadsHandler() fasthttp.RequestHandler {
 
 		vote := &models.Vote{}
 
-		body := ctx.Request.Body()
+		body := ctx.PostBody()
 		if err := json.Unmarshal(body, &vote); err != nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
@@ -193,7 +193,7 @@ func (td *ThreadDelivery) voteThreadsHandler() fasthttp.RequestHandler {
 		changed, err := td.threadUcase.CreateVote(vote, slug)
 
 		if err == ErrNotFound {
-			//logrus.info(err)
+
 			SendResponse(ctx, 404, &ErrorResponse{
 				Message: ErrNotFound.Error(),
 			})
@@ -201,7 +201,7 @@ func (td *ThreadDelivery) voteThreadsHandler() fasthttp.RequestHandler {
 		}
 
 		if err != nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})

@@ -36,10 +36,10 @@ func (pd *PostDelivery) createPostsHandler() fasthttp.RequestHandler {
 
 		var posts []*models.Post
 
-		err := json.Unmarshal(ctx.Request.Body(), &posts)
+		err := json.Unmarshal(ctx.PostBody(), &posts)
 
 		if err != nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
@@ -49,7 +49,7 @@ func (pd *PostDelivery) createPostsHandler() fasthttp.RequestHandler {
 		resultPosts, err := pd.postUcase.Create(posts, slugStr)
 
 		if err == ErrNotFound {
-			//logrus.info(err)
+
 			SendResponse(ctx, 404, &ErrorResponse{
 				Message: ErrNotFound.Error(),
 			})
@@ -57,7 +57,7 @@ func (pd *PostDelivery) createPostsHandler() fasthttp.RequestHandler {
 		}
 
 		if err == ErrAlreadyExists || err == ErrConflict {
-			//logrus.info(err)
+
 			SendResponse(ctx, 409, &ErrorResponse{
 				Message: ErrAlreadyExists.Error(),
 			})
@@ -65,7 +65,7 @@ func (pd *PostDelivery) createPostsHandler() fasthttp.RequestHandler {
 		}
 
 		if err != nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
@@ -84,16 +84,23 @@ func (pd *PostDelivery) createPostsHandler() fasthttp.RequestHandler {
 }
 
 func (pd *PostDelivery) getPostHandler() fasthttp.RequestHandler {
+	type wrapper struct {
+		Post   *models.Post   `json:"post"`
+		Author *models.User   `json:"author,omitempty"`
+		Thread *models.Thread `json:"thread,omitempty"`
+		Forum  *models.Forum  `json:"forum,omitempty"`
+	}
+
 	return func(ctx *fasthttp.RequestCtx) {
 		idStr, _ := ctx.UserValue("id").(string)
-		related := string(ctx.QueryArgs().Peek("related"))
+		related := string(ctx.FormValue("related"))
 
 		id, _ := strconv.Atoi(idStr)
 
 		found, err := pd.postUcase.GetById(id)
 
 		if found == nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 404, &ErrorResponse{
 				Message: ErrNotFound.Error(),
 			})
@@ -101,18 +108,11 @@ func (pd *PostDelivery) getPostHandler() fasthttp.RequestHandler {
 		}
 
 		if err != nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
 			return
-		}
-
-		type wrapper struct {
-			Post   *models.Post   `json:"post"`
-			Author *models.User   `json:"author,omitempty"`
-			Thread *models.Thread `json:"thread,omitempty"`
-			Forum  *models.Forum  `json:"forum,omitempty"`
 		}
 
 		postWrapper := &wrapper{
@@ -124,7 +124,7 @@ func (pd *PostDelivery) getPostHandler() fasthttp.RequestHandler {
 				foundAuthor, err := pd.postUcase.GetPostAuthor(found.AuthorNickname)
 
 				if err != nil {
-					//logrus.info(err)
+
 					SendResponse(ctx, 500, &ErrorResponse{
 						Message: ErrInternal.Error(),
 					})
@@ -138,7 +138,7 @@ func (pd *PostDelivery) getPostHandler() fasthttp.RequestHandler {
 				foundThread, err := pd.postUcase.GetPostThread(found.Thread)
 
 				if err != nil {
-					//logrus.info(err)
+
 					SendResponse(ctx, 500, &ErrorResponse{
 						Message: ErrInternal.Error(),
 					})
@@ -152,7 +152,7 @@ func (pd *PostDelivery) getPostHandler() fasthttp.RequestHandler {
 				foundForum, err := pd.postUcase.GetPostForum(found.ForumSlug)
 
 				if err != nil {
-					//logrus.info(err)
+
 					SendResponse(ctx, 500, &ErrorResponse{
 						Message: ErrInternal.Error(),
 					})
@@ -171,10 +171,10 @@ func (pd *PostDelivery) getPostHandler() fasthttp.RequestHandler {
 func (pd *PostDelivery) getPostsHandler() fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 		slugOrId, _ := ctx.UserValue("slug").(string)
-		limitStr := string(ctx.QueryArgs().Peek("limit"))
-		descStr := string(ctx.QueryArgs().Peek("desc"))
-		since := string(ctx.QueryArgs().Peek("since"))
-		sort := string(ctx.QueryArgs().Peek("sort"))
+		limitStr := string(ctx.FormValue("limit"))
+		descStr := string(ctx.FormValue("desc"))
+		since := string(ctx.FormValue("since"))
+		sort := string(ctx.FormValue("sort"))
 
 		limit, _ := strconv.Atoi(limitStr)
 		desc, _ := strconv.ParseBool(descStr)
@@ -182,7 +182,7 @@ func (pd *PostDelivery) getPostsHandler() fasthttp.RequestHandler {
 		posts, err := pd.postUcase.GetPosts(slugOrId, limit, desc, since, sort)
 
 		if err == ErrNotFound {
-			//logrus.info(err)
+
 			SendResponse(ctx, 404, &ErrorResponse{
 				Message: ErrNotFound.Error(),
 			})
@@ -190,7 +190,7 @@ func (pd *PostDelivery) getPostsHandler() fasthttp.RequestHandler {
 		}
 
 		if err != nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
@@ -218,10 +218,10 @@ func (pd *PostDelivery) updatePost() fasthttp.RequestHandler {
 			Id: id,
 		}
 
-		err := json.Unmarshal(ctx.Request.Body(), &pst)
+		err := json.Unmarshal(ctx.PostBody(), &pst)
 
 		if err != nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
@@ -231,7 +231,7 @@ func (pd *PostDelivery) updatePost() fasthttp.RequestHandler {
 		pst, err = pd.postUcase.Update(pst)
 
 		if err == ErrNotFound {
-			//logrus.info(err)
+
 			SendResponse(ctx, 404, &ErrorResponse{
 				Message: ErrNotFound.Error(),
 			})

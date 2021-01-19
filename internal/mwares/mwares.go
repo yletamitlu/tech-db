@@ -21,7 +21,7 @@ func PanicRecovering(next fasthttp.RequestHandler) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 		defer func() {
 			if err := recover(); err != nil {
-				//logrus.info(err)
+
 			}
 		}()
 

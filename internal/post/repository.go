@@ -7,6 +7,7 @@ import (
 type PostRepository interface {
 	SelectById(id int) (*models.Post, error)
 	SelectByForumSlug(slug string) ([]*models.Post, error)
+	SelectPostFields(fields string, filter string, params ...interface{}) (*models.Post, error)
 
 	InsertInto(post *models.Post) (*models.Post, error)
 	InsertManyInto(posts []*models.Post) ([]*models.Post, error)

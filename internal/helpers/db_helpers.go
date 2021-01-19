@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	PathItemLen        = 8
+	PathItemLen        = 7
 	NullPathItem       = "00000000"
 	MaxNesting         = 5
 	PathItemsSeparator = "."

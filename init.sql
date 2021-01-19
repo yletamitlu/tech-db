@@ -112,5 +112,6 @@ execute procedure addUserForum();
 CREATE INDEX ON threads (slug);
 CREATE INDEX ON threads (created_at, forum_slug);
 CREATE INDEX ON posts (thread_id);
-CREATE INDEX ON posts (substring(path, 1, 8));
+CREATE INDEX ON posts (substring(path, 1, 7));
 CREATE INDEX ON votes (thread_id, user_nickname);
+CREATE INDEX ON user_forum (forum_slug);

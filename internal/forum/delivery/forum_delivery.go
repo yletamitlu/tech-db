@@ -3,7 +3,7 @@ package delivery
 import (
 	"encoding/json"
 	"github.com/buaazp/fasthttprouter"
-	//"github.com/sirupsen/logrus"
+
 	"github.com/valyala/fasthttp"
 	. "github.com/yletamitlu/tech-db/internal/consts"
 	"github.com/yletamitlu/tech-db/internal/forum"
@@ -32,9 +32,9 @@ func (fd *ForumDelivery) Configure(router *fasthttprouter.Router) {
 func (fd *ForumDelivery) CreateForumHandler(ctx *fasthttp.RequestCtx) {
 	f := &models.Forum{}
 
-	body := ctx.Request.Body()
+	body := ctx.PostBody()
 	if err := json.Unmarshal(body, &f); err != nil {
-		//logrus.info(err)
+
 		SendResponse(ctx, 500, &ErrorResponse{
 			Message: ErrInternal.Error(),
 		})
@@ -44,13 +44,13 @@ func (fd *ForumDelivery) CreateForumHandler(ctx *fasthttp.RequestCtx) {
 	f, err := fd.forumUcase.Create(f)
 
 	if err == ErrAlreadyExists {
-		//logrus.info(err)
+
 		SendResponse(ctx, 409, f)
 		return
 	}
 
 	if err == ErrNotFound {
-		//logrus.info(err)
+
 		SendResponse(ctx, 404, &ErrorResponse{
 			Message: ErrNotFound.Error(),
 		})
@@ -58,7 +58,7 @@ func (fd *ForumDelivery) CreateForumHandler(ctx *fasthttp.RequestCtx) {
 	}
 
 	if err != nil {
-		//logrus.info(err)
+
 		SendResponse(ctx, 500, &ErrorResponse{
 			Message: ErrInternal.Error(),
 		})
@@ -76,7 +76,7 @@ func (fd *ForumDelivery) getForumDetailsHandler() fasthttp.RequestHandler {
 		found, err := fd.forumUcase.GetBySlug(slug, true)
 
 		if err == ErrNotFound {
-			//logrus.info(err)
+
 			SendResponse(ctx, 404, &ErrorResponse{
 				Message: ErrNotFound.Error(),
 			})
@@ -84,7 +84,7 @@ func (fd *ForumDelivery) getForumDetailsHandler() fasthttp.RequestHandler {
 		}
 
 		if err != nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
@@ -100,9 +100,9 @@ func (fd *ForumDelivery) getForumUsersHandler() fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 		slug, _ := ctx.UserValue("slug").(string)
 
-		limitStr := string(ctx.QueryArgs().Peek("limit"))
-		descStr := string(ctx.QueryArgs().Peek("desc"))
-		since := string(ctx.QueryArgs().Peek("since"))
+		limitStr := string(ctx.FormValue("limit"))
+		descStr := string(ctx.FormValue("desc"))
+		since := string(ctx.FormValue("since"))
 
 		limit, _ := strconv.Atoi(limitStr)
 		desc, _ := strconv.ParseBool(descStr)
@@ -110,7 +110,7 @@ func (fd *ForumDelivery) getForumUsersHandler() fasthttp.RequestHandler {
 		found, err := fd.forumUcase.GetUsers(slug, limit, desc, since)
 
 		if found == nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 404, &ErrorResponse{
 				Message: ErrNotFound.Error(),
 			})
@@ -118,7 +118,7 @@ func (fd *ForumDelivery) getForumUsersHandler() fasthttp.RequestHandler {
 		}
 
 		if err != nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})

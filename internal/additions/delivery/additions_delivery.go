@@ -2,7 +2,7 @@ package delivery
 
 import (
 	"github.com/buaazp/fasthttprouter"
-	//"github.com/sirupsen/logrus"
+
 	"github.com/valyala/fasthttp"
 	"github.com/yletamitlu/tech-db/internal/additions"
 	. "github.com/yletamitlu/tech-db/internal/consts"
@@ -31,7 +31,7 @@ func (ad *AdditionsDelivery) Clear() fasthttp.RequestHandler {
 		forumStatus, threadStatus, postStatus, userStatus, err := ad.additionsRepo.Status()
 
 		if err != nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})
@@ -62,7 +62,7 @@ func (ad *AdditionsDelivery) Status() fasthttp.RequestHandler {
 		err := ad.additionsRepo.Clear()
 
 		if err != nil {
-			//logrus.info(err)
+
 			SendResponse(ctx, 500, &ErrorResponse{
 				Message: ErrInternal.Error(),
 			})

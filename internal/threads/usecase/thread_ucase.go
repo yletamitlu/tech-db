@@ -38,21 +38,25 @@ func (tUc *ThreadUcase) Create(thread *models.Thread) (*models.Thread, error) {
 		return nil, ErrNotFound
 	}
 
-	found, _ := tUc.GetBySlug(thread.Slug)
+	forumSlug, exists := tUc.forumUcase.Exists(thread.ForumSlug)
 
-	if found != nil {
-		return found, ErrAlreadyExists
+	if !exists {
+		return nil, ErrNotFound
+	}
+
+	if thread.ForumSlug != forumSlug {
+		thread.ForumSlug = forumSlug
 	}
 
 	if thread.Slug != "" {
-		forumSlug, exists := tUc.forumUcase.Exists(thread.ForumSlug)
+		found, err := tUc.GetBySlug(thread.Slug)
 
-		if exists && thread.ForumSlug != forumSlug {
-			thread.ForumSlug = forumSlug
+		if err != nil && err != ErrNotFound {
+			return nil, err
 		}
 
-		if !exists {
-			return nil, ErrNotFound
+		if found != nil {
+			return found, ErrAlreadyExists
 		}
 	}
 
@@ -81,9 +85,9 @@ func (tUc *ThreadUcase) CreateVote(vote *models.Vote, slugOrId string) (*models.
 		vote.Thread = foundThr.Id
 	}
 
-	foundAuthor, _ := tUc.userUcase.GetByNickname(vote.AuthorNickname)
+	foundNickname, _ := tUc.userUcase.GetUserNickname(vote.AuthorNickname)
 
-	if foundAuthor == nil {
+	if foundNickname == "" {
 		return nil, ErrNotFound
 	}
 
@@ -101,9 +105,9 @@ func (tUc *ThreadUcase) CreateVote(vote *models.Vote, slugOrId string) (*models.
 }
 
 func (tUc *ThreadUcase) GetThread(slugOrId string) (*models.Thread, error) {
-	id, err := strconv.Atoi(slugOrId)
+	foundThr := &models.Thread{}
 
-	var foundThr *models.Thread
+	id, err := strconv.Atoi(slugOrId)
 	if err == nil {
 		foundThr, err = tUc.GetById(id)
 	} else {
@@ -199,4 +203,12 @@ func (tUc *ThreadUcase) Update(updatedThread *models.Thread, slugOrId string) (*
 	}
 
 	return foundThr, nil
+}
+
+func (tUc *ThreadUcase) GetExactFields(fields string, slugOrId string) (*models.Thread, error) {
+	if id, err := strconv.Atoi(slugOrId); err == nil {
+		return tUc.threadRepos.SelectThreadFields(fields, "id=$1", id)
+	}
+
+	return tUc.threadRepos.SelectThreadFields(fields, "slug=$1", slugOrId)
 }

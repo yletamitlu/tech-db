@@ -127,3 +127,13 @@ func (tr *ThreadPgRepos) UpdateVotes(updatedThread *models.Thread) {
 	_, _ = tr.conn.Exec(`UPDATE threads SET votes = $1 where id = $2`,
 		updatedThread.Votes, updatedThread.Id)
 }
+
+func (tr *ThreadPgRepos) SelectThreadFields(fields string, filter string, params ...interface{}) (*models.Thread, error) {
+	t := &models.Thread{}
+
+	if err := tr.conn.Get(t, "SELECT " + fields + " FROM threads WHERE " + filter, params...); err != nil {
+		return nil, err
+	}
+
+	return t, nil
+}

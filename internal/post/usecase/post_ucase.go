@@ -170,33 +170,21 @@ func (pUc *PostUcase) Update(updatedPost *models.Post) (*models.Post, error) {
 }
 
 func (pUc *PostUcase) GetPosts(slugOrId string, limit int, desc bool, since string, sort string) ([]*models.Post, error) {
-	id, err := strconv.Atoi(slugOrId)
+	thread, err := pUc.threadUcase.GetExactFields("id", slugOrId)
+
 	if err != nil {
-		foundThr, _ := pUc.threadUcase.GetBySlug(slugOrId)
-		if foundThr == nil {
-			return nil, ErrNotFound
-		}
-
-		id = foundThr.Id
-	} else {
-		foundThr, _ := pUc.threadUcase.GetById(id)
-
-		if foundThr == nil {
-			return nil, ErrNotFound
-		}
-
-		id = foundThr.Id
+		return nil, ErrNotFound
 	}
 
 	var posts []*models.Post
 
 	switch sort {
 	case "tree":
-		posts, err = pUc.postRepos.SelectPostsTree(id, limit, desc, since)
+		posts, err = pUc.postRepos.SelectPostsTree(thread.Id, limit, desc, since)
 	case "parent_tree":
-		posts, err = pUc.postRepos.SelectPostsParentTree(id, limit, desc, since)
+		posts, err = pUc.postRepos.SelectPostsParentTree(thread.Id, limit, desc, since)
 	default:
-		posts, err = pUc.postRepos.SelectPostsFlat(id, limit, desc, since)
+		posts, err = pUc.postRepos.SelectPostsFlat(thread.Id, limit, desc, since)
 	}
 
 	if err != nil {
